@@ -1,0 +1,36 @@
+// INI_CFG(section, name, default)
+
+INI_CFG(system, hse_value, 16000000)
+INI_CFG(system, core_freq, 32000000)
+INI_CFG(system, rco_div, 8)
+INI_CFG(system, uart_baudrate, 115200)
+INI_CFG(system, cmd_connect_time, 300)
+INI_CFG(system, battery_voltage, 14400)
+INI_CFG(system, battery_cutoff_voltage, 7000)
+INI_CFG(system, battery_thold_voltage, 2)
+INI_CFG(system, battery_error_voltage, 50)
+
+INI_CFG(sd, format, 0)
+INI_CFG(sd, format_file_system, 2)
+INI_CFG(sd, file_size_limit, 32)
+
+INI_CFG(ads, conver_rate, 2000)
+INI_CFG(ads, mode, 0)
+INI_CFG(ads, start_time, 0)
+INI_CFG(ads, offset_calibration, 0)
+INI_CFG(ads, gain_calibration, 0)
+INI_CFG(ads, data_file_format, 1)
+INI_CFG(ads, osr, 32)
+
+INI_CFG(gps, check, 1)
+INI_CFG(gps, startup, 1)
+INI_CFG(gps, next_startup_time, 604800)
+INI_CFG(gps, uart_baudrate, 9600)
+INI_CFG(gps, up_rate, 1000)
+INI_CFG(gps, mode, 2)
+
+INI_CFG(rtc, ex_input_freq, 32768)
+INI_CFG(rtc, ex_cal_offset, 0)
+
+
+#undef INI_CFG

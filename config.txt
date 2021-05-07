@@ -1,0 +1,55 @@
+; 配置文件, 行尾必须以CRLF控制符结尾 
+;'='前后不允许有空格
+
+[system]
+;system_hse_value: 系统外部晶振中心频率, 单位Hz, 默认: 32000000
+system_hse_value=32000000
+;system_core_freq: 系统核心频率, 单位Hz, 默认: 32000000
+system_core_freq=32000000
+;system_rco_div: 系统时钟分频输出, 输出时钟为ADS采样单元提供采样时钟, 输出时钟频率=system_core_freq / system_rco_div, 可选参数[1,2,4,8,16] 默认: 4
+system_rco_div=4
+;system_uart_baudrate: 系统串口波特率, 默认: 115200bps
+system_uart_baudrate=115200
+;system_cmd_connect_time: 系统串口连接超时, Unit: s, 默认值:300
+system_cmd_connect_time=300
+;system_battery_voltage: 电池额定电压, Unit: mV
+system_battery_voltage=14400
+;system_battery_cutoff_voltage: 电池放电截止电压, Unit: mV
+system_battery_cutoff_voltage=8000
+;system_battery_thold_voltage: 系统停止工作电压阈值: Unit: %
+system_battery_thold_voltage=2
+;system_battery_error_voltage: 电池电压修正参数, 无单位, V = (Vadc * ((R1+R2)/R2+(system_battery_error_voltage / 1000.00f))
+system_battery_error_voltage=-50
+[sd-tf]
+;sd_format: 是否格式化, 默认: 0(否)
+sd_format=0
+;sd_format_file_system: 文件系统, 可选参数[fat32,exfat], 默认: fat32
+sd_format_file_system=fat32
+[ads127]
+;ads_conver_rate: 采样率(Hz), 默认: 2000
+ads_conver_rate=2000
+;ads_mode: 采样模式, 2-高分辨率模式, 1-低功耗模式, 0-超低功耗模式, 默认: 0
+ads_mode=0
+;ads_start_time: 开始采样时间, 单位秒(s), 数值等于距离授时时间的秒数 默认: 0, 授时成功立即开始采样
+ads_start_time=0
+;ads_offset_calibration: 系统误差校准, 长度24Bit, 格式为二进制补码格式, 默认: 000000
+ads_offset_calibration=000000
+;ads_gain_calibration: 系统增益校准, 长度16Bit, 格式为二进制补码格式, (<8000h gain>1), (=8000h gain=1), (>8000h gain<1), 默认: 8000
+ads_gain_calibration=8000
+;ads数据输出: (filter_output - ads_offset_calibration) * ads_gain_calibration / 8000h
+[gps]
+;gps_check: 开机是否等待GPS授时, 默认:1(等待)
+gps_check=1
+;gps_startup: 是否启动gps模块, 默认: 1(启动)
+gps_startup=1
+;gps_next_startup_time: gps定时启动授时, 单位秒(s), 数值等于距离上次启动授时时间, 默认: 604800(一周:7*24*60*60)
+gps_next_startup_time=604800
+;gps_uart_baudrate: gps模块串口通信波特率, 默认: 9600bps
+gps_uart_baudrate=9600
+;gps_up_rate: GPS定位更新时间间隔, 单位毫秒(ms), 默认: 1000
+gps_up_rate=1000
+;gps_mode: GPS工作模式, 1-接受GPS信号, 2-接受BDS信号, 3-接受GPS+BDS信号, 4-接受GLONASS信号, 5-接受GPS+GLONASS信号, 6-接受BDS+GLONASS信号, 7-接受GPS+BDS+GLONASS信号, 默认: 2
+gps_mode=2
+[rtc]
+rtc_ex_input_freq=32768
+rtc_ex_cal_offset=0x00

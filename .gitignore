@@ -1,0 +1,12 @@
+
+
+
+.cproject
+.project
+*.png
+*.jflash
+*.bin
+*.ico
+.settings
+Debug
+Release
