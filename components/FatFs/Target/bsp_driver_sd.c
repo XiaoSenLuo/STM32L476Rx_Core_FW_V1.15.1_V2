@@ -161,7 +161,7 @@ static uint8_t SD_CheckReadWtiteOperation(SD_HandleTypeDef *hsd, uint32_t timeou
 }
 
 
-#include "SEGGER_RTT.h"
+//#include "SEGGER_RTT.h"
 extern void Error_Handler(void);
 
 void BSP_SD_MspInit(SD_HandleTypeDef *hsd, void *Params){
@@ -404,6 +404,16 @@ uint8_t BSP_SD_ChangeSpeed(int16_t in_div){
 	return ret;
 }
 
+void BSP_SD_Enable(void){
+	__HAL_SD_ENABLE(&hsd1);
+}
+
+
+
+void BSP_SD_Disable(void){
+	__HAL_SD_DISABLE(&hsd1);
+}
+
 /* can be used to modify previous code / undefine following code / add code */
 /* USER CODE END AfterInitSection */
 
@@ -417,8 +427,8 @@ uint8_t BSP_SD_ITConfig(void){
 	  /* Code to be updated by the user or replaced by one from the FW pack (in a stmxxxx_sd.c file) */
     __SD_DETECT_GPIO_CLK_ENABLE();
 	  /* SD Card detect pin configuration */
-	LL_GPIO_SetPinMode(SD_DETECT_GPIO_PORT, SD_DETECT_PIN, LL_GPIO_MODE_INPUT);
-    LL_GPIO_SetPinPull(SD_DETECT_GPIO_PORT, SD_DETECT_PIN, LL_GPIO_PULL_NO);
+//	LL_GPIO_SetPinMode(SD_DETECT_GPIO_PORT, SD_DETECT_PIN, LL_GPIO_MODE_INPUT);
+//    LL_GPIO_SetPinPull(SD_DETECT_GPIO_PORT, SD_DETECT_PIN, LL_GPIO_PULL_UP);
 	return 0;
 }
 
@@ -731,13 +741,7 @@ __weak void BSP_SD_ReadCpltCallback(void)
 /* USER CODE BEGIN AdditionalCode */
 /* user code can be inserted here */
 uint8_t BSP_SD_IsDetected(void){
-//  __IO uint8_t status = SD_PRESENT;
-//
-//  if(HAL_GPIO_ReadPin(SD_DETECT_GPIO_PORT, SD_DETECT_PIN) != GPIO_PIN_RESET){
-//    status = SD_NOT_PRESENT;
-//  }
-
-  return !(SD_DETECT_GPIO_PORT->IDR & SD_DETECT_PIN);
+  return !(SD_DETECT_GPIO_PORT->ODR & SD_DETECT_PIN);
 }
 /* USER CODE END AdditionalCode */
 

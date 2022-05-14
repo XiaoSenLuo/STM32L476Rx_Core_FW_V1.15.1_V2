@@ -18,6 +18,15 @@ void*    memcpy_dma (void *__restrict dst, const void *__restrict src, size_t s)
 	NVIC_DisableIRQ(MEM_DMA_IRQ);
 //	LL_DMA_DisableChannel(MEM_DMA, MEM_DMA_CH);
 	CLEAR_BIT(((DMA_Channel_TypeDef *)0x40020008UL)->CCR, DMA_CCR_EN);
+
+	LL_DMA_ConfigTransfer(MEM_DMA, MEM_DMA_CH, LL_DMA_DIRECTION_MEMORY_TO_MEMORY |
+												LL_DMA_PRIORITY_HIGH              |
+												LL_DMA_MODE_NORMAL                |
+												LL_DMA_PERIPH_INCREMENT           |
+												LL_DMA_MEMORY_INCREMENT           |
+												LL_DMA_PDATAALIGN_BYTE            |
+												LL_DMA_MDATAALIGN_BYTE);
+
 //	LL_DMA_SetDataLength(MEM_DMA, MEM_DMA_CH, (uint32_t)s);
 	WRITE_REG(((DMA_Channel_TypeDef *)(0x40020008UL))->CNDTR, s);   // 设置传输数据大小
 //	LL_DMA_ConfigAddresses(MEM_DMA, MEM_DMA_CH, (uint32_t)src, (uint32_t)dst, LL_DMA_DIRECTION_MEMORY_TO_MEMORY);

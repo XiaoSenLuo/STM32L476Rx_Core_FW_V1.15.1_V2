@@ -40,4 +40,9 @@
 
 #define ADS_DEFAULT_CONFIG                            (0x31 | (ADS_STATUS_WORD << 1)) // 使能SPI超时, 使能增益, 偏移设置, 状态字设置为CRC-8
 
+typedef struct{
+	uint32_t conver_rate;
+	uint16_t osr;
+}ads_config_t;
+
 #endif /* ADS127_ADS127_CONFIG_H_ */

@@ -16,6 +16,11 @@ ads_drv_t ads_drv = {.write = NULL, .read = NULL, .write_read = NULL};
 volatile uint8_t ads_nums = ADS_CNT;
 volatile uint32_t ads_timestampe = 0;
 
+static void _delay(uint32_t delay){
+	uint32_t tmp = 32000000 / 1000 * delay;
+	while(tmp--);
+}
+
 __attribute__((weak)) void ads_drv_init(ads_write_func_t write_func, ads_read_func_t read_func, ads_write_read_func_t wr_func){
     if(write_func != NULL){
     	ads_drv.write = write_func;
@@ -30,6 +35,7 @@ __attribute__((weak)) void ads_drv_init(ads_write_func_t write_func, ads_read_fu
     if(wr_func != NULL){
     	ads_drv.write_read = wr_func;
     }
+    ads_drv.delay = _delay;
 }
 
 

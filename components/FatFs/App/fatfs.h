@@ -38,11 +38,19 @@ extern char sd_root_path[4]; /* SD logical drive path */
 //extern FATFS SDFatFS; /* File system object for SD logical drive */
 //extern FIL SDFile; /* File object for SD */
 
-void MX_FATFS_Init(void);
+uint8_t FATFS_SD_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 uint8_t FS_FileOperations(void);
 
+
+/**
+ *
+ * @param out_error_str
+ * @param len
+ * @param in_error_code
+ */
+void fs_error_string(char* out_error_str, uint8_t len, int in_error_code);
 
 /**
  *
@@ -59,12 +67,35 @@ uint8_t fs_scan_file(const char *in_path, FILINFO *out_file_info, uint32_t *out_
  *
  * @param in_path
  * @param pattern
+ * @param out_file_info
+ * @param opt
+ * @return
+ */
+uint8_t fs_find_file(const char *in_path, const char* pattern, FILINFO *out_file_info, char opt);
+
+//uint8_t fs_write_file(FIL* file, const void* data, uint32_t btw);
+//
+//uint8_t fs_write_string(FIL* file, const char* str);
+//
+//uint8_t fs_read_file(FIL* file, void* buf, uint32_t btr);
+
+
+/**
+ *
+ * @param in_path
+ * @param pattern
  * @param opt
  * @return
  */
 uint8_t fs_del_file(const char *in_path, const char* pattern, uint8_t opt);
 
-uint8_t fs_create_file(FIL *in_file, const char *in_path, const char *in_file_name);
+uint8_t fs_create_file(FIL *in_file, const char *in_file_name);
+
+uint8_t fs_create_dir(const char *path);
+
+uint32_t fs_get_total_space(void);
+
+uint32_t fs_get_free_space(void);
 
 /* USER CODE END Prototypes */
 #ifdef __cplusplus

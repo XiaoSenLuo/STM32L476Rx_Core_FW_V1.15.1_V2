@@ -33,6 +33,10 @@
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
+#define IO_ADS1_CS_PORT                       GPIOA
+#define IO_ADS1_CS_PIN                        LL_GPIO_PIN_4
+#define IO_ADS1_DRDY_PORT                      GPIOB
+#define IO_ADS1_DRDY_PIN                       LL_GPIO_PIN_1
 
 /* USER CODE END Private defines */
 
@@ -45,6 +49,8 @@ void ll_exti_it_gpio_init(GPIO_TypeDef * in_gpio_port, uint32_t in_exti_pin, uin
 void gpio_pa4_change_mode(uint32_t in_mode);
 
 void optimize_gpio_power(GPIO_TypeDef *in_gpio, uint32_t in_pin);
+
+void gpio_all_set_analog(void);
 
 /* USER CODE END Prototypes */
 

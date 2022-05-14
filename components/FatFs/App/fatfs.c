@@ -20,23 +20,44 @@
 #include "string.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "utils.h"
 
 uint8_t retSD;    /* Return value for SD */
 char sd_root_path[4];   /* SD logical drive path */
 
-
+#define check_FRESULT(ret) {if((ret) != 0) return ret;}
 
 /* USER CODE BEGIN Variables */
 #include "stm32l4xx_ll_rtc.h"
 /* USER CODE END Variables */
 
-void MX_FATFS_Init(void)
+static __aligned(4) uint8_t workBuffer[FF_MAX_SS] = { 0 };
+
+static uint8_t sd_is_init = 0;
+
+uint8_t FATFS_SD_Init(void)
 {
   /*## FatFS: Link the SD driver ###########################*/
-  retSD = FATFS_LinkDriver(&SD_Driver, sd_root_path);
-
+//  retSD = FATFS_LinkDriver(&SD_Driver, sd_root_path);
+	if(sd_is_init) return 0;
+    uint8_t ret = 0;
   /* USER CODE BEGIN Init */
   /* additional user code for init */
+	if(BSP_SD_IsDetected() == SD_PRESENT){
+		ret = FATFS_LinkDriver(&SD_Driver, sd_root_path);
+        check_FRESULT(ret);
+//        ret = f_mount(&SDFatFS, (TCHAR const*)sd_root_path, 0);   // 立即挂载
+        if(FR_NO_FILESYSTEM){
+        	MKFS_PARM mkfs_parm = {0};
+        	mkfs_parm.fmt = FM_FAT32;
+        	ret = f_mkfs(sd_root_path, &mkfs_parm, (uint8_t*)workBuffer, sizeof(workBuffer));
+        	check_FRESULT(ret);
+        	sd_is_init = 1;
+        }
+	}else{
+		ret = FR_NOT_READY;
+	}
+	return ret;
   /* USER CODE END Init */
 }
 
@@ -54,9 +75,10 @@ DWORD get_fattime(void)
 	LL_RTC_TimeTypeDef ll_rtc_time = { .TimeFormat = LL_RTC_HOURFORMAT_24HOUR };
 	LL_RTC_DateTypeDef ll_rtc_date = { 0 };
 
-	ll_rtc_time.Hours = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
-	ll_rtc_time.Minutes = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
 	ll_rtc_time.Seconds = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
+	ll_rtc_time.Minutes = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
+	ll_rtc_time.Hours = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
+
 	ll_rtc_date.Day = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetDay(RTC));
 	ll_rtc_date.Month = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetMonth(RTC));
 //	ll_rtc_date.WeekDay = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetWeekDay(RTC));
@@ -75,7 +97,8 @@ uint8_t FS_FileOperations(void)
   uint32_t byteswritten = 0; /* File write/read counts */
 
   char rtext[32]; /* File read buffer */
-  DWORD fre_clust, fre_sect, tot_sect;
+  DWORD fre_clust;
+  uint32_t fre_sect, tot_sect;
   FIL SDFile;       /* File object for SD */
   FATFS* fs;
   int8_t ret = 0;
@@ -84,6 +107,8 @@ uint8_t FS_FileOperations(void)
 //  uint32_t _fn = 0;
   DIR _dir = { 0 };
 //                          fs_scan_file(NULL, NULL, &_fn);  // 查找文件数量
+  res = f_chdir(sd_root_path);
+  if(res) return res;
   FILINFO _fi = { 0 };
   res = f_findfirst(&_dir, &_fi, "", "*.txt");
   while((res == FR_OK) && (_fi.fname[0])){
@@ -122,17 +147,15 @@ uint8_t FS_FileOperations(void)
       if(ret != 0) ret =  1;
       f_close(&SDFile);
       if(ret != 0) return (uint8_t)ret;
-
       res = f_getfree(sd_root_path, &fre_clust, &fs);
-      if(res != FR_OK){
-    	  return 1;
-      }
-      res = f_open(&SDFile, "sd info.txt", FA_CREATE_ALWAYS | FA_WRITE);
-      if(res != FR_OK) return 1;
-      tot_sect = (fs->n_fatent - 2) * fs->csize;
-      fre_sect = fre_clust * fs->csize;
+      if(res != FR_OK) return res;
+
+      tot_sect = ((fs->n_fatent - 2) * fs->csize) >> 1 >> 10 >> 10;  // GB
+      fre_sect = (fre_clust * fs->csize) >> 1 >> 10 >> 10;  // GB
       memset(wtext, 0, sizeof(wtext));
-      sprintf(wtext, "总容量: %.3f GiB\r\n剩余容量: %.3f GiB\r\n", ((double)tot_sect / 2.00f / 1024.00f / 1024.00f), ((double)fre_sect / 2.00f / 1024.00f / 1024.00f));
+      sprintf(wtext, "总容量: %d GiB\r\n剩余容量: %d GiB\r\n", tot_sect, fre_sect);
+      res = f_open(&SDFile, "sd info.txt", FA_CREATE_ALWAYS | FA_WRITE);
+      if(res != FR_OK) return res;
       f_write(&SDFile, wtext, (uint16_t)strlen(wtext), NULL);
       f_close(&SDFile);
       f_chdir(sd_root_path);  // 返回根目录
@@ -140,6 +163,33 @@ uint8_t FS_FileOperations(void)
   return (uint8_t)res;
 }
 
+static const char* err_str[] = {
+		"FR_OK",
+		"FR_DISK_ERR",
+		"FR_INT_ERR",
+		"FR_NOT_READY",
+		"FR_NO_FILE",
+		"FR_NO_PATH",
+		"FR_INVALID_NAME",
+		"FR_DENIED",
+		"FR_EXIST",
+		"FR_INVALID_OBJECT",
+		"FR_WRITE_PROTECTED",
+		"FR_INVALID_DRIVE",
+		"FR_NOT_ENABLED",
+		"FR_NO_FILESYSTEM",
+		"FR_MKFS_ABORTED",
+		"FR_TIMEOUT",
+		"FR_LOCKED",
+		"FR_NOT_ENOUGH_CORE",
+		"FR_TOO_MANY_OPEN_FILES",
+		"FR_INVALID_PARAMETER",
+};
+
+void fs_error_string(char* out_error_str, uint8_t len, int in_error_code){
+    if(in_error_code > 19 - 1) return;
+    strncpy(out_error_str, err_str[in_error_code], len);
+}
 
 uint8_t fs_scan_file(const char *in_path, FILINFO *out_file_info, uint32_t *out_file_num){
 
@@ -183,70 +233,163 @@ uint8_t fs_scan_file(const char *in_path, FILINFO *out_file_info, uint32_t *out_
 	return ret;
 }
 
-
-uint8_t fs_del_file(const char *in_path, const char* pattern, uint8_t opt){
+uint8_t fs_find_file(const char *in_path, const char* pattern, FILINFO *out_file_info, char opt){
 	FRESULT ret = 0;
 	DIR _dir;
-	FILINFO _fno = {0}, _fno_del = {0};
+	FILINFO _fno = {0};
+	uint32_t _data = 0, _time = 0, _size = 0;
     char _path[FF_LFN_BUF] = {0};
 
-
     if((in_path == NULL)){
-//    	_path = (char*)malloc(FF_LFN_BUF);
     	f_getcwd(_path, FF_LFN_BUF);
     }else{
-//    	_path = (char*)malloc(strlen(in_path) + 1);
     	strcpy(_path, in_path);
     }
+
+    if(opt == 't'){
+		_time = UINT32_MAX;
+		_data = UINT32_MAX;
+    }
+    if(opt == 's'){
+    	_size = UINT32_MAX;
+    }
 	ret = f_findfirst(&_dir, &_fno, _path, pattern);
-	switch(opt){
-	case DEL_FILE_BY_MODIFYTIME_UP: // 删除修改时间最早的文件
-		_fno_del.ftime = UINT16_MAX;
-		_fno_del.fdate = UINT16_MAX;
-        while((ret == FR_OK) && (_fno.fname[0])){
-           if((_fno.fdate + _fno.ftime) < (_fno_del.fdate + _fno_del.ftime)){
-        	   _fno_del.fdate = _fno.fdate;
-        	   _fno_del.ftime = _fno.ftime;
-              memcpy(&_fno_del, &_fno, sizeof(FILINFO));
-           }
-           ret = f_findnext(&_dir, &_fno);
+	while((ret == FR_OK) && (_fno.fname[0])){
+		if(_fno.fattrib & AM_DIR) goto find_next_section;
+        switch(opt){
+        case '*':
+        	memcpy(out_file_info, &_fno, sizeof(FILINFO));
+        	break;
+        case 'T': // 时间排序(最新)
+        	if(_fno.fdate > _data){
+        	T_true_section:
+        		_data = _fno.fdate;
+        		_time = _fno.ftime;
+        		memcpy(out_file_info, &_fno, sizeof(FILINFO));
+        		goto find_next_section;
+        	}
+        	if((_fno.fdate == _data) && (_fno.ftime >= _time)){
+                goto T_true_section;
+        	}
+        	break;
+        case 't': // 时间排序(最早)
+        	if(_fno.fdate < _data){
+        	t_true_section:
+        		_data = _fno.fdate;
+        		_time = _fno.ftime;
+        		memcpy(out_file_info, &_fno, sizeof(FILINFO));
+        		goto find_next_section;
+        	}
+        	if((_fno.fdate == _data) && (_fno.ftime <= _time)){
+                goto t_true_section;
+        	}
+        	break;
+        case 'S': // 大小排序(最大)
+			if(_fno.fsize > _size){
+				_size = _fno.fsize;
+				memcpy(out_file_info, &_fno, sizeof(FILINFO));
+			}
+        	break;
+        case 's':  // (最小)
+			if(_fno.fsize < _size){
+				_size = _fno.fsize;
+				memcpy(out_file_info, &_fno, sizeof(FILINFO));
+			}
+        	break;
+        default:
+        	goto return_section;
+        	break;
         }
-        strcat(_path, _fno_del.fname);
-        ret = f_unlink(_path);
-		break;
-	case DEL_FILE_BY_MODIFYTIME_DOWN:
-		break;
-	default:
-		break;
+
+	find_next_section:
+	    ret = f_findnext(&_dir, &_fno);
 	}
-	f_closedir(&_dir);
-//	free(_path);
-//	_path = NULL;
+return_section:
+	ret += f_closedir(&_dir);
 	return ret;
 }
 
-
-uint8_t fs_create_file(FIL *in_file, const char *in_path, const char *in_file_name){
+uint8_t fs_del_file(const char *in_path, const char* pattern, uint8_t opt){
 	FRESULT ret = 0;
+	FILINFO _fno = {0};
+	char _path[FF_LFN_BUF] = {0};
 
-    if((in_path == NULL)){
-//    	_path = (char*)malloc(FF_LFN_BUF);
-//    	f_getcwd(_path, FF_LFN_BUF);
-//    	strcpy(_path, in_file_name);
-    	ret = f_open(in_file, in_file_name, FA_CREATE_ALWAYS | FA_WRITE);
-    	return ret;
-    }else{
-        char *_path = NULL;
-    	_path = (char*)malloc(strlen(in_path) + strlen(in_file_name) + 2);
-    	strcpy(_path, in_path);
-    	if(_path[strlen(_path) - 1] != '/') strcat(_path, "/");
-    	strcat(_path, in_file_name);
-    	ret = f_open(in_file, _path, FA_CREATE_ALWAYS | FA_WRITE);
-    	free(_path);
-    	_path = NULL;
+	strcpy(_path, in_path);
+    ret = fs_find_file(_path, pattern,  &_fno, opt);
+    if((ret == FR_OK) && _fno.fname[0]){
+    	strcat(_path, "/");
+    	strcat(_path, _fno.fname);
+    	ret = f_unlink(_path);
     }
+    if((ret == FR_OK) && _fno.fname[0] == '\0') ret = FR_NO_FILE;
+
     return ret;
 }
+
+/**
+ * 文件名可以包含绝对路径也可以只是文件名， 但是路径不支持相对路径
+ */
+uint8_t fs_create_file(FIL *in_file, const char *in_file_name){
+	FRESULT ret = 0;
+    int pos1 = -1;
+    char dir[128];
+
+    pos1 = find_chr(in_file_name, '/');
+    if(pos1 > 0){  // 包含路径
+    	pos1 = find_last_index_of_chr(in_file_name, '/');
+        strncpy(dir, in_file_name, pos1);
+        ret = fs_create_dir(dir);
+        if(ret != FR_OK || ret != FR_EXIST) return ret;
+        goto create_file_section;
+    }else{
+    	goto create_file_section;
+    }
+create_file_section:
+    ret = f_open(in_file, in_file_name, FA_CREATE_ALWAYS | FA_WRITE);
+    return ret;
+}
+
+uint8_t fs_create_dir(const char *path){  // path = 0:/dir1/dir2/dir3
+    uint8_t ret = 0;
+    int pos2 = 0, pos1 = 0;
+    char dir_name[FF_MAX_LFN >> 1] = {'\0'};
+
+    pos2 = find_chr(&path[pos2], '/');
+
+    while(pos2 > 0){
+        strncat(dir_name, &path[pos1], pos2);
+        ret = f_mkdir(dir_name);
+        if(ret != FR_OK && ret != FR_EXIST) return ret;
+//        strcat(dir_name, "/");
+        pos1 += pos2;
+        pos2 = find_chr(&path[pos1 + 1], '/') + 1;
+    }
+    ret = f_mkdir(path);  // 最后一级目录
+
+    return ret;
+}
+
+uint32_t fs_get_total_space(void){
+	uint64_t fre_clust = 0;
+	uint32_t tot_sect = 0;
+	FATFS *_fs = NULL;
+	f_getfree(sd_root_path, (DWORD*)&fre_clust, &_fs);
+	tot_sect = (((_fs->n_fatent - 2) * _fs->csize) >> 1) >> 10;        // Unit: MB
+
+	return tot_sect;
+}
+
+uint32_t fs_get_free_space(void){
+	uint64_t fre_clust = 0;
+	uint32_t fre_sect = 0;
+	FATFS *_fs = NULL;
+	f_getfree(sd_root_path, (DWORD*)&fre_clust, &_fs);
+
+	fre_sect = ((fre_clust * _fs->csize) >> 1) >> 10;                  // Unit: MB
+
+	return fre_sect;
+}
+
 
 /* USER CODE END Application */
 

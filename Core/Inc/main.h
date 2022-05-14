@@ -39,6 +39,8 @@ extern "C" {
 #include "stm32l4xx_ll_utils.h"
 #include "stm32l4xx_ll_pwr.h"
 #include "stm32l4xx_ll_dma.h"
+#include "stm32l4xx_ll_wwdg.h"
+#include "stm32l4xx_ll_iwdg.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -51,7 +53,7 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
-#include "SEGGER_RTT.h"
+//#include "SEGGER_RTT.h"
 #include "time.h"
 #include "ctype.h"
 
@@ -69,6 +71,13 @@ extern "C" {
 #include "st_crc.h"
 #include "ini.h"
 
+#include "utils.h"
+
+//#include "usbd_core.h"
+//#include "usbd_desc.h"
+//#include "usbd_msc.h"
+//#include "usbd_storage.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -81,17 +90,13 @@ extern TIM_HandleTypeDef htim2;   // use for timbase
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
 
-typedef struct _sys_config_t{
-    uint32_t gps_baudrate;
-//    uint32_t gps_
-}sys_config_t;
-
 extern __IO uint32_t task_fild;
 
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+
 
 #define EXTI_LINE0_Priority             0x0D
 #define EXTI_LINE1_Priority             0x0D
@@ -100,7 +105,7 @@ extern __IO uint32_t task_fild;
 #define EXTI_LINE4_Priority             0x0D
 #define EXTI_LINE5_Priority             0x0D
 #define EXTI_LINE6_Priority             0x0D
-#define EXTI_LINE7_Priority             0x04
+#define EXTI_LINE7_Priority             0x07
 #define EXTI_LINE8_Priority             0x0D
 #define EXTI_LINE9_Priority             0x0D
 #define EXTI_LINE10_Priority            0x0D
@@ -163,25 +168,54 @@ extern __IO uint32_t task_fild;
 #define TASK_GPS                             0x00000002U    // GPS授时
 #define TASK_ADS                             0x00000004U    // ADS采集
 #define TASK_RTCTIME                         0x00000008U    // 时钟校准
+
 #define TASK_CMD_STOP                        0x00000010U    // 关闭命令相应, 关闭相应外设
 #define TASK_GPS_STOP                        0x00000020U    // 已完成授时, 关闭相应外设
 #define TASK_ADS_STOP                        0x00000040U    // 停止采集
-//#define TASK_TIME_STOP                       0x00000080U    //
+#define TASK_ADS_TEST                        0x00000080U    //
 
 #define TASK_LED                             0x00000100U    // LED控制
 #define TASK_TIM                             0x00000200U    // 定时器控制, 产生定时脉冲控制 ADS 采样率
 #define TASK_USB_DECTION                     0x00000400U    // USB插入检测
 #define TASK_BATTERY                         0x00000800U    // 电池电压监测
-#define TASK_BATTERY_STOP                    0x00001000U
 
+#define TASK_BATTERY_STOP                    0x00001000U
+#define TASK_ENTER_LP_MODE                   0x00002000U    // 进入低功耗模式
+
+#define TASK_ILDE                            0x80000000U    // 空闲统计任务
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+/**
+ *
+ * @param fmt
+ * @return
+ */
 uint8_t cmd_printf(const char* fmt, ...);
+/**
+ *
+ * @param fmt
+ * @return
+ */
+uint8_t cmd_log_printf(const char* fmt, ...);
+/**
+ *
+ * @param data
+ * @param len
+ * @return
+ */
+uint8_t cmd_write(uint8_t* data, uint16_t len);
+/**
+ *
+ * @param _log_file
+ * @param fmt
+ * @return
+ */
 uint8_t f_log_printf(FIL* _log_file, const char* fmt, ...);
-/* USER CODE BEGIN EFP */
 
+/* USER CODE BEGIN EFP */
+void system_get_device_uid(char* id, uint8_t len);
 
 /* USER CODE END EFP */
 
@@ -225,7 +259,7 @@ uint8_t f_log_printf(FIL* _log_file, const char* fmt, ...);
 #define EXTI_USBCD_GPIO_Port                       GPIOC
 #define EXTI_USBCD_EXTI_IRQn                       EXTI3_IRQn
 #define EXTI_USBCD_Priority                        EXTI_LINE3_Priority
-#define LED_Pin                                    LL_GPIO_PIN_4
+#define LED_Pin                                    LL_GPIO_PIN_1
 #define LED_GPIO_Port                              GPIOA
 #define HSE_OSC_EN_Pin                             LL_GPIO_PIN_1
 #define HSE_OSC_EN_Port                            GPIOH
@@ -240,34 +274,54 @@ uint8_t f_log_printf(FIL* _log_file, const char* fmt, ...);
 #define ADS_CS(value)                   HAL_GPIO_WritePin(ADS_CS_GPIO_Port, ADS_CS_Pin, (value))
 #define ADS_Start_Convert()             LL_GPIO_SetOutputPin(ADS_START_GPIO_Port, ADS_START_Pin)
 #define ADS_Stop_Convert()              LL_GPIO_ResetOutputPin(ADS_START_GPIO_Port, ADS_START_Pin)
-
 #define V5_ON()                         LL_GPIO_SetOutputPin(V5_EN_GPIO_Port, V5_EN_Pin)
 #define V5_OFF()                        LL_GPIO_ResetOutputPin(V5_EN_GPIO_Port, V5_EN_Pin)
 
+#define SD_CONNECT_TO_MCU              0x01
+#define SD_CONNECT_TO_USB              0x00
+
+#define where_sd_connect()              ((LL_GPIO_ReadOutputPort(TS_IN1_GPIO_Port) & TS_IN1_Pin) ? SD_CONNECT_TO_MCU : SD_CONNECT_TO_USB)
+
 #define HSE_OSC_Control(value)          HAL_GPIO_WritePin(HSE_OSC_EN_Port, HSE_OSC_EN_Pin, (value))
 
-#define HEX                             "0123456789ABCDEF"
 
 #define RTC_TIMEOUT                     4
 #define RTC_SD_WR_TIMEOUT               16
 #define RTC_ADS_READ_TIMEOUT            8
 
+/**
+ *
+ */
 void enter_sleep_mode(void);
+
+/**
+ *
+ * @param power_mode
+ */
 void enter_power_mode(uint32_t power_mode);
+
+/**
+ *
+ * @return
+ */
 int8_t get_battery_level(void);
 
+/**
+ *
+ * @param in_clk_freq
+ */
 void   mco_use_for_ads_clk(uint32_t in_clk_freq);
 
 
 static inline void ads_drdy_exti_enable(void){
-//	HAL_NVIC_SetPriority (EXTI_DRDY_EXTI_IRQn, EXTI_DRDY_Priority, 0);
-//	NVIC_EnableIRQ(EXTI_DRDY_EXTI_IRQn);
+	HAL_NVIC_SetPriority (EXTI_DRDY_EXTI_IRQn, EXTI_DRDY_Priority, 0);
+	NVIC_EnableIRQ(EXTI_DRDY_EXTI_IRQn);
 	LL_EXTI_DisableRisingTrig_0_31(LL_EXTI_LINE_7);
 	LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_7);
 }
 
 static inline void ads_drdy_exti_disable(void){
-//    NVIC_DisableIRQ(EXTI_DRDY_EXTI_IRQn);
+    NVIC_DisableIRQ(EXTI_DRDY_EXTI_IRQn);
 	LL_EXTI_DisableFallingTrig_0_31(LL_EXTI_LINE_7);
 	LL_EXTI_DisableRisingTrig_0_31(LL_EXTI_LINE_7);
 }
@@ -360,7 +414,16 @@ static inline uint32_t systick_get_counter(void){
 	return  (uint32_t)(SysTick->VAL);
 }
 
-//void systick_callback(void);
+
+#define CONFIG_CALLBACK       1
+
+int32_t get_config(void* user, const char* section, const char* name);
+int32_t set_config(void* user, const char* section, const char* name, int32_t value);
+
+#if defined(CONFIG_CALLBACK) && (CONFIG_CALLBACK)
+void registe_config_callback(void* user, const char* section, const char* name, void* cb);
+void unregiste_config_callback(void* user, const char* section, const char* name);
+#endif
 
 /* USER CODE END Private defines */
 

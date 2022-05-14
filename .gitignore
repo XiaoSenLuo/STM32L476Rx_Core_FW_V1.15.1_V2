@@ -1,12 +1,12 @@
-
-
-
 .cproject
 .project
 *.png
 *.jflash
 *.bin
+*.hex
+*.elf
 *.ico
 .settings
 Debug
 Release
+*build*

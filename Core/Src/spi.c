@@ -21,17 +21,10 @@
 #include "spi.h"
 
 /* USER CODE BEGIN 0 */
-#include "main.h"
+#include "stm32l4xx_it.h"
 #include <string.h>
 
-#define SPI_STATUS_WRITE             0x01
-#define SPI_STATUS_READ              0x10
-
-static __IO uint8_t spi_write_status = 0;  // bitx=0:OK, bitx=1:BUSY
-static __IO uint8_t spi_read_status = 0;   // bitx=0:OK, bitx=1:BUSY
-static __IO uint8_t spi_wr_status = 0;   // bitx=0:OK, bitx=1:BUSY
-static __IO uint8_t spi_wr_dma_status = 0;
-
+#if(0)
 
 #if(LL_SPI == 0)
 
@@ -181,13 +174,13 @@ void spi_init(SPI_TypeDef *spi_index){
 
 		LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
 
-		GPIO_InitStruct.Pin = LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5;
+		GPIO_InitStruct.Pin = LL_GPIO_PIN_7 | LL_GPIO_PIN_6 | LL_GPIO_PIN_5;
 		GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
 		GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 		GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 		GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
 		GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-		LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+		LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 		LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
 		LL_RCC_GetSystemClocksFreq(&rcc_clk);
@@ -251,7 +244,7 @@ void spi_deinit(SPI_TypeDef *spi_index){
 }
 
 #if(LL_SPI)
-uint8_t _spi1_tx_dma_config(uint8_t *ptr, uint16_t _s){  // DMA1 Channel3; Request 1
+static uint8_t _spi1_tx_dma_config(uint8_t *ptr, uint16_t _s){  // DMA1 Channel3; Request 1
 	uint8_t ret = 0;
 //	__IO uint32_t _dma_ch = 0, _dma_csl = 0;
 	/* (1) Enable the clock of DMA1 and DMA1 */
@@ -301,7 +294,7 @@ uint8_t _spi1_tx_dma_config(uint8_t *ptr, uint16_t _s){  // DMA1 Channel3; Reque
 	return ret;
 }
 
-uint8_t _spi1_rx_dma_config(uint8_t *ptr, uint16_t _s){   // DMA1 Channel2; Request 1
+static uint8_t _spi1_rx_dma_config(uint8_t *ptr, uint16_t _s){   // DMA1 Channel2; Request 1
 	uint8_t ret = 0;
 //	__IO uint32_t _dma_ch = 0, _dma_csl = 0;
 	/* (1) Enable the clock of DMA1 and DMA1 */
@@ -579,7 +572,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi){
     }
 }
 #endif
-
+#endif
 #endif
 
 

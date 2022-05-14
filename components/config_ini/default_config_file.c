@@ -77,6 +77,7 @@ size_t get_default_config_lines(void){
 	return (sizeof(default_config) / sizeof(char*));
 }
 
+
 char** get_default_config_file(void){
     return (char**)default_config;
 }

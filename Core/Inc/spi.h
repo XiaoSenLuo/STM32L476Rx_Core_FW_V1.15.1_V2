@@ -75,8 +75,8 @@ uint8_t SPI1_Read(uint8_t* ptr, uint16_t s);
 #if(LL_SPI)
 uint32_t get_spi1_dma_status(void);
 
-uint8_t _spi1_tx_dma_config(uint8_t *ptr, uint16_t _s);
-uint8_t _spi1_rx_dma_config(uint8_t *ptr, uint16_t _s);
+//uint8_t _spi1_tx_dma_config(uint8_t *ptr, uint16_t _s);
+//uint8_t _spi1_rx_dma_config(uint8_t *ptr, uint16_t _s);
 
 #else
 

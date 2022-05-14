@@ -11,8 +11,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "minmea/minmea.h"
+
 
 #ifndef ATGM336H
 #define ATGM336H                       1
@@ -92,26 +94,19 @@ void gps_save_config_to_flash(void);
 void gps_restart(uint8_t in_restart_mode);
 void gps_set_baudrate(uint32_t in_baudrate);
 
-uint8_t gps_update(uint8_t* out_data, uint8_t s);
 
 /**
  * Funcsion: check ANT is OK
  * return: 0-OK, 1-ANT is not connect
  */
-uint8_t gps_check_ant(uint8_t* in_data);
+uint8_t gps_check_ant(void);
 
-/**
- * in_status : -1, get pps status, and return pps status
- *             0, set pps not ok
- *             1, set pps ok
- */
-uint8_t gps_check_pps(int8_t in_status);
-
+bool gps_sentence_is_ready(void);
 
 /**
  * 获取时区
  */
-int8_t gps_get_time_zone(struct minmea_float in_longitude);
+int8_t gps_get_time_zone(void);
 
 /**
  * 配置GPS
@@ -120,7 +115,18 @@ void gps_config(gps_config_t* gps_cfg);
 
 //uint8_t gps_recieve_sentence(char* buffer);
 
+typedef struct minmea_sentence_zda gps_time_t;
+typedef struct minmea_sentence_gll gps_gll_t;
 
+gps_time_t gps_get_time(void);
+
+gps_gll_t gps_get_gll(void);
+
+void gps_uart_init(uint32_t _baurate);
+
+void gps_uart_deinit(void);
+
+int gps_uart_get_sentence(uint8_t *ptr, uint16_t s);
 
 
 #else

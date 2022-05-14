@@ -43,14 +43,15 @@ void st_adc_deinit(void);
 void st_adc_start(void);
 void st_adc_stop(void);
 
+void st_adc_wait_for_conver_cplt(void);
 /* USER CODE BEGIN Prototypes */
 
 
-uint16_t get_extern_analog_voltage(void);
+uint32_t get_extern_analog_voltage(void);
 uint16_t get_internal_voltage(void);
 float get_internal_temp(void);
 
-void adc1_irq_callback(void);
+void st_adc1_irq_callback(void);
 
 #if(ADC_USE_DMA)
 void adc1_dma_rxcplt_callback(void);

@@ -76,7 +76,7 @@
 #define SD_NOT_PRESENT           ((uint8_t)0x00)  /* also in bsp_driver_sd.h */
 #define SD_DETECT_PIN            SD_CD_Pin      // SD卡插入检测管脚
 #define SD_DETECT_GPIO_PORT      SD_CD_GPIO_Port
-#define __SD_DETECT_GPIO_CLK_ENABLE()    LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
+#define __SD_DETECT_GPIO_CLK_ENABLE()    LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
 
 /* DMA definitions for SD DMA transfer */
 #define __DMAx_TxRx_CLK_ENABLE            __HAL_RCC_DMA2_CLK_ENABLE
@@ -111,6 +111,9 @@ uint8_t BSP_SD_DeInit(void);
  * @return
  */
 uint8_t BSP_SD_ChangeSpeed(int16_t in_div);
+
+void BSP_SD_Enable(void);
+void BSP_SD_Disable(void);
 
 uint8_t BSP_SD_ITConfig(void);
 void    BSP_SD_DetectIT(void);

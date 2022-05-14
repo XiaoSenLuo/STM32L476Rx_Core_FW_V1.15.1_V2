@@ -69,9 +69,4 @@ char** get_default_config_file(void);
 uint8_t create_default_config_file(const char *file_name);
 
 
-
-
-
-
-
 #endif /* CONFIG_INI_CONFIG_INI_H_ */

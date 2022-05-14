@@ -20,6 +20,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "adc.h"
 #include "main.h"
+
+#include "stm32l4xx_hal.h"
+
 /* USER CODE BEGIN 0 */
 #ifndef ADC_CONVER_DATA_BUFFER_SIZE
 #define ADC_CONVER_DATA_BUFFER_SIZE                         1
@@ -29,20 +32,66 @@
 #define VDDA_APPLI               ((uint32_t)3300)
 #endif
 
-static __IO uint32_t adc_data_index = 0;
+static __IO uint8_t adc_data_index = 0;
 static uint8_t adc_status = 0;
-static uint16_t adc_conver_data[ADC_CONVER_DATA_BUFFER_SIZE] = { 0 };
+static __IO uint16_t adc_conver_data[ADC_CONVER_DATA_BUFFER_SIZE] = { 0 };
 
-#if(ADC_USE_DMA)
-static __IO int8_t adc_dma_status = 0;
-static uint8_t _adc1_dma_config(uint16_t *in_ptr, uint16_t in_size);
-static uint8_t _adc2_dma_config(uint16_t *in_ptr, uint16_t in_size);
-#endif
+static __IO uint32_t nbADCData = 0;
+
+static ADC_HandleTypeDef AdcHandle;
+
+void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
+{
+  GPIO_InitTypeDef          GPIO_InitStruct;
+
+  /*##-1- Enable peripherals and GPIO Clocks #################################*/
+  /* ADC Periph clock enable */
+  __HAL_RCC_ADC_CLK_ENABLE();
+  /* ADC Periph interface clock configuration */
+  __HAL_RCC_ADC_CONFIG(RCC_ADCCLKSOURCE_SYSCLK);
+  /* Enable GPIO clock ****************************************/
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+
+  /*##-2- Configure peripheral GPIO ##########################################*/
+  /* ADC Channel GPIO pin configuration */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  HAL_NVIC_SetPriority(ADC1_IRQn, 13, 0);
+  HAL_NVIC_EnableIRQ(ADC1_IRQn);
+
+}
+
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef *hadc)
+{
+
+  /*##-1- Reset peripherals ##################################################*/
+	__HAL_RCC_ADC_FORCE_RESET();
+	__HAL_RCC_ADC_RELEASE_RESET();
+  /* ADC Periph clock disable
+   (automatically reset all ADC's) */
+  __HAL_RCC_ADC_CLK_DISABLE();
+
+  /*##-2- Disable peripherals and GPIO Clocks ################################*/
+  /* De-initialize the ADC Channel GPIO pin */
+  HAL_GPIO_DeInit(GPIOC, GPIO_PIN_0);
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle)
+{
+  /* Get the converted value of regular channel */
+	adc_conver_data[0] = HAL_ADC_GetValue(AdcHandle);
+	adc_status = 1;
+}
+
 /* USER CODE END 0 */
 
 
 /* ADC1 init function */
 void st_adc_init(void){
+#if(0)
 	LL_ADC_InitTypeDef ADC_InitStruct = {0};
 	LL_ADC_REG_InitTypeDef ADC_REG_InitStruct = {0};
 	LL_ADC_CommonInitTypeDef ADC_CommonInitStruct = {0};
@@ -62,9 +111,6 @@ void st_adc_init(void){
 	LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSOURCE_SYSCLK);
 	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_ADC);
 
-	HAL_NVIC_SetPriority(ADC1_2_IRQn, (DMA1_Channel1_Priority - 1), 0);
-	NVIC_EnableIRQ(ADC1_2_IRQn);
-
 	if(LL_ADC_IsEnabled(ADC1)) LL_ADC_Disable(ADC1);
 	/** Common config
 	*/
@@ -77,11 +123,8 @@ void st_adc_init(void){
 	ADC_REG_InitStruct.SequencerLength = LL_ADC_REG_SEQ_SCAN_DISABLE;
 	ADC_REG_InitStruct.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
 	ADC_REG_InitStruct.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
-#if(ADC_USE_DMA)
-	ADC_REG_InitStruct.DMATransfer = LL_ADC_REG_DMA_TRANSFER_UNLIMITED;
-#else
 	ADC_REG_InitStruct.DMATransfer = LL_ADC_REG_DMA_TRANSFER_NONE;
-#endif
+
 	ADC_REG_InitStruct.Overrun = LL_ADC_REG_OVR_DATA_OVERWRITTEN;
 	LL_ADC_REG_Init(ADC1, &ADC_REG_InitStruct);
 
@@ -131,138 +174,178 @@ void st_adc_init(void){
     wait_loop_index = ((LL_ADC_DELAY_CALIB_ENABLE_ADC_CYCLES * 32) >> 1);
     while(wait_loop_index != 0){ wait_loop_index--; }
 
-#if(ADC_USE_DMA)
-    _adc1_dma_config(adc_conver_data, ADC_CONVER_DATA_BUFFER_SIZE);
-//    _adc2_dma_config(adc_conver_data, ADC_CONVER_DATA_BUFFER_SIZE);
-#else
+	HAL_NVIC_SetPriority(ADC1_2_IRQn, (DMA1_Channel1_Priority - 1), 0);
+	NVIC_EnableIRQ(ADC1_2_IRQn);
+
+	st_irq_handler_register(ADC1_2_IRQn, adc1_irq_callback);
+
     LL_ADC_ClearFlag_OVR(ADC1);
     LL_ADC_EnableIT_OVR(ADC1);
-	LL_ADC_EnableIT_EOS(ADC1);
+//	LL_ADC_EnableIT_EOS(ADC1);
 	LL_ADC_EnableIT_EOC(ADC1);
 #endif
+
+	ADC_ChannelConfTypeDef   sConfig;
+	/*##-1- Configure the ADC peripheral #######################################*/
+	AdcHandle.Instance          = ADC1;
+
+	if (HAL_ADC_DeInit(&AdcHandle) != HAL_OK)
+	{
+	/* ADC de-initialization Error */
+	Error_Handler();
+	}
+
+	AdcHandle.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4;          /* Asynchronous clock mode, input ADC clock not divided */
+	AdcHandle.Init.Resolution            = ADC_RESOLUTION_8B;            /* 12-bit resolution for converted data */
+	AdcHandle.Init.DataAlign             = ADC_DATAALIGN_RIGHT;           /* Right-alignment for converted data */
+	AdcHandle.Init.ScanConvMode          = DISABLE;                       /* Sequencer disabled (ADC conversion on only 1 channel: channel set on rank 1) */
+	AdcHandle.Init.EOCSelection          = ADC_EOC_SINGLE_CONV;           /* EOC flag picked-up to indicate conversion end */
+	AdcHandle.Init.LowPowerAutoWait      = DISABLE;                       /* Auto-delayed conversion feature disabled */
+	AdcHandle.Init.ContinuousConvMode    = DISABLE;                       /* Continuous mode disabled to have only 1 conversion at each conversion trig */
+	AdcHandle.Init.NbrOfConversion       = 1;                             /* Parameter discarded because sequencer is disabled */
+	AdcHandle.Init.DiscontinuousConvMode = DISABLE;                       /* Parameter discarded because sequencer is disabled */
+	AdcHandle.Init.NbrOfDiscConversion   = 1;                             /* Parameter discarded because sequencer is disabled */
+	AdcHandle.Init.ExternalTrigConv      = ADC_SOFTWARE_START;            /* Software start to trig the 1st conversion manually, without external event */
+	AdcHandle.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE; /* Parameter discarded because software trigger chosen */
+	AdcHandle.Init.DMAContinuousRequests = DISABLE;                       /* DMA one-shot mode selected (not applied to this example) */
+	AdcHandle.Init.Overrun               = ADC_OVR_DATA_OVERWRITTEN;      /* DR register is overwritten with the last conversion result in case of overrun */
+	AdcHandle.Init.OversamplingMode      = DISABLE;                       /* No oversampling */
+
+	if (HAL_ADC_Init(&AdcHandle) != HAL_OK)
+	{
+	/* ADC initialization Error */
+	Error_Handler();
+	}
+
+	/*##-2- Configure ADC regular channel ######################################*/
+	sConfig.Channel      = ADC_CHANNEL_1;                /* Sampled channel number */
+	sConfig.Rank         = ADC_REGULAR_RANK_1;          /* Rank of sampled channel number ADCx_CHANNEL */
+	sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;    /* Sampling time (number of clock cycles unit) */
+	sConfig.SingleDiff   = ADC_SINGLE_ENDED;            /* Single-ended input channel */
+	sConfig.OffsetNumber = ADC_OFFSET_NONE;             /* No offset subtraction */
+	sConfig.Offset = 0;                                 /* Parameter discarded because offset correction is disabled */
+
+
+	if (HAL_ADC_ConfigChannel(&AdcHandle, &sConfig) != HAL_OK)
+	{
+	/* Channel Configuration Error */
+	Error_Handler();
+	}
+
+	/* Run the ADC calibration in single-ended mode */
+	if (HAL_ADCEx_Calibration_Start(&AdcHandle, ADC_SINGLE_ENDED) != HAL_OK)
+	{
+	/* Calibration Error */
+	Error_Handler();
+	}
+
+	st_irq_handler_register(ADC1_2_IRQn, st_adc1_irq_callback);
 }
 
 void st_adc_deinit(void){
+#if(0)
 	LL_ADC_DeInit(ADC1);
 	LL_AHB2_GRP1_DisableClock(LL_AHB2_GRP1_PERIPH_ADC);
 	LL_GPIO_DisablePinAnalogControl(GPIOC, LL_GPIO_PIN_0);
 	LL_GPIO_DisablePinAnalogControl(GPIOA, LL_GPIO_PIN_4);
 	LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_4, LL_GPIO_MODE_OUTPUT);
+#endif
+
+	if (HAL_ADC_DeInit(&AdcHandle) != HAL_OK)
+	{
+	/* ADC de-initialization Error */
+	Error_Handler();
+	}
 }
 
 /* USER CODE BEGIN 1 */
 
 void st_adc_start(void){
+#if(0)
 	if(LL_ADC_IsEnabled(ADC1) == 0){
 //		LL_ADC_DisableDeepPowerDown(ADC1);
 //		LL_ADC_EnableInternalRegulator(ADC1);
 		LL_ADC_Enable(ADC1);
 		while(LL_ADC_IsActiveFlag_ADRDY(ADC1) == 0);
 	}
-#if(ADC_USE_DMA)
-	adc_dma_status = 0;
-	_adc1_dma_config(adc_conver_data, ADC_CONVER_DATA_BUFFER_SIZE);
-#endif
 	if((LL_ADC_IsDisableOngoing(ADC1) == 0) && (LL_ADC_REG_IsConversionOngoing(ADC1) == 0)){
 		adc_status = 0;
 		LL_ADC_REG_StartConversion(ADC1);
 	}
+#endif
+	/*##-3- Start the conversion process #######################################*/
+	adc_status = 0;
+	if (HAL_ADC_Start_IT(&AdcHandle) != HAL_OK)
+	{
+		adc_status = 1;
+	/* Start Conversation Error */
+	Error_Handler();
+	}
 }
 
 void st_adc_stop(void){
+#if(0)
     if(LL_ADC_IsEnabled(ADC1)
     		&& (LL_ADC_IsDisableOngoing(ADC1) == 0)
 			&& (LL_ADC_REG_IsStopConversionOngoing(ADC1) == 0)){
         LL_ADC_REG_StopConversion(ADC1);
     	LL_ADC_Disable(ADC1);
-#if(ADC_USE_DMA)
-    	adc_dma_status = 0;
-#endif
     	adc_data_index = 0;
     	adc_status = 0;
     }
+#endif
+	if (HAL_ADC_Stop_IT(&AdcHandle) != HAL_OK)
+	{
+	/* Start Conversation Error */
+	Error_Handler();
+	}
+	adc_status = 0;
 }
 
+void st_adc_wait_for_conver_cplt(void){
+	uint32_t _timeout = SystemCoreClock;
+	while((_timeout--) && (adc_status == 1));
+}
 
-uint16_t get_extern_analog_voltage(void){
-#if(ADC_USE_DMA)
-	if(adc_dma_status != 0){
-	    if(adc_data_index && (adc_dma_status > 0)){
-            uint16_t _extern_mvoltage = 0;
-            _extern_mvoltage = __LL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, adc_conver_data[0], LL_ADC_RESOLUTION_8B);
-            return _extern_mvoltage;
-	    }
-	    if(adc_dma_status < 0){
-	    	adc_data_index = 0;
-	    	adc_dma_status = 0;
-	    	_adc1_dma_config(adc_conver_data, ADC_CONVER_DATA_BUFFER_SIZE);
-	    	st_adc_start();
-	    }
-	}
-#else
+// return voltage: mV
+uint32_t get_extern_analog_voltage(void){
+#if(0)
 	if(adc_status){
-		uint16_t _extern_mvoltage = 0;
+		uint32_t _extern_mvoltage = 0;
 		_extern_mvoltage = __LL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, adc_conver_data[0], LL_ADC_RESOLUTION_8B);
 		return _extern_mvoltage;
 	}
-#endif
 	return 0;
+#endif
+	return __HAL_ADC_CALC_DATA_TO_VOLTAGE(3300, adc_conver_data[0], ADC_RESOLUTION_8B);
 }
 
 uint16_t get_internal_voltage(void){
-#if(ADC_USE_DMA)
-	if(adc_dma_status != 0){
-	    if(adc_data_index && (adc_dma_status > 0)){
-            uint16_t _internal_mvoltage = 0;
-            _internal_mvoltage = __LL_ADC_CALC_VREFANALOG_VOLTAGE(adc_conver_data[1], LL_ADC_RESOLUTION_12B);
-            return _internal_mvoltage;
-	    }
-	    if(adc_dma_status < 0){
-	    	adc_data_index = 0;
-	    	adc_dma_status = 0;
-	    	_adc1_dma_config(adc_conver_data, ADC_CONVER_DATA_BUFFER_SIZE);
-	    	st_adc_start();
-	    }
-	}
-#else
-
-#endif
-
 
 	return 0;
 }
 
 float get_internal_temp(void){
-
-#if(ADC_USE_DMA)
-	if(adc_dma_status != 0){
-	    if(adc_data_index && (adc_dma_status > 0)){
-            uint16_t _internal_temp = 0;
-            _internal_temp = __LL_ADC_CALC_TEMPERATURE(VDDA_APPLI, adc_conver_data[2], LL_ADC_RESOLUTION_12B);
-            return (float)_internal_temp;
-	    }
-	    if(adc_dma_status < 0){
-	    	adc_data_index = 0;
-	    	adc_dma_status = 0;
-	    	_adc1_dma_config(adc_conver_data, ADC_CONVER_DATA_BUFFER_SIZE);
-	    	st_adc_start();
-	    }
-	}
-#else
    if(adc_status){
        uint16_t _internal_temp = 0;
        _internal_temp = __LL_ADC_CALC_TEMPERATURE(VDDA_APPLI, adc_conver_data[1], LL_ADC_RESOLUTION_8B);
        return (float)_internal_temp;
    }
-
-#endif
 	return 25.00f;
 }
 
+static uint8_t con_times = 0;
 static void adc1_eoc_callback(void){
 //	adc_data_index += 1;
-	adc_conver_data[adc_data_index++] = LL_ADC_REG_ReadConversionData32(ADC1);
-	adc_status = 1;
+	adc_conver_data[0] += LL_ADC_REG_ReadConversionData32(ADC1); // 只有一个转换
+	if((++con_times) < 8){
+		st_adc_start();
+	}else{
+		con_times = 0;
+		adc_conver_data[0] >>= 3;
+		adc_status = 1;
+	}
+
 }
 
 static void adc1_eos_callback(void){
@@ -270,7 +353,8 @@ static void adc1_eos_callback(void){
     adc_status = 2;
 }
 
-void adc1_irq_callback(void){
+void st_adc1_irq_callback(void){
+#if(0)
 	if(LL_ADC_IsActiveFlag_EOS(ADC1) != 0){
 		LL_ADC_ClearFlag_EOS(ADC1);
 		adc1_eos_callback();
@@ -286,98 +370,11 @@ void adc1_irq_callback(void){
 	/* Call interruption treatment function */
 		LL_ADC_DisableIT_OVR(ADC1);
 	}
-}
-
-#if(ADC_USE_DMA)
-static uint8_t _adc1_dma_config(uint16_t *in_ptr, uint16_t in_size){    // DMA1 Channel1; Request 0
-    uint8_t ret = 0;
-	HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA1_Channel1_Priority, 0);
-	NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-
-	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
-	LL_DMA_ClearFlag_GI1(DMA1);
-	/* (3) Configure the DMA1_Channel2 functional parameters */
-	LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_1,
-			            LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
-						LL_DMA_PRIORITY_HIGH |
-						LL_DMA_MODE_NORMAL |
-						LL_DMA_PERIPH_NOINCREMENT |
-						LL_DMA_MEMORY_INCREMENT |
-						LL_DMA_PDATAALIGN_HALFWORD |
-						LL_DMA_PDATAALIGN_HALFWORD);
-	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1,
-			LL_ADC_DMA_GetRegAddr(ADC1, LL_ADC_DMA_REG_REGULAR_DATA),
-			(uint32_t)in_ptr,
-			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, in_size);
-	LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_1, LL_DMA_REQUEST_0);
-
-	/* (5) Enable DMA interrupts complete/error */
-	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_1);
-	LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_1);
-
-	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
-
-	return ret;
-}
-
-static uint8_t _adc2_dma_config(uint16_t *in_ptr, uint16_t in_size){    // DMA1 Channel1; Request 0
-    uint8_t ret = 0;
-	HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, DMA1_Channel2_Priority, 0);
-	NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-
-	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
-	LL_DMA_ClearFlag_GI1(DMA1);
-	/* (3) Configure the DMA1_Channel2 functional parameters */
-	LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2,
-			            LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
-						LL_DMA_PRIORITY_HIGH |
-						LL_DMA_MODE_CIRCULAR |
-						LL_DMA_PERIPH_NOINCREMENT |
-						LL_DMA_MEMORY_INCREMENT |
-						LL_DMA_PDATAALIGN_HALFWORD |
-						LL_DMA_PDATAALIGN_HALFWORD);
-	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2,
-			LL_ADC_DMA_GetRegAddr(ADC2, LL_ADC_DMA_REG_REGULAR_DATA),
-			(uint32_t)in_ptr,
-			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, in_size);
-	LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_2, LL_DMA_REQUEST_0);
-
-	/* (5) Enable DMA interrupts complete/error */
-	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
-	LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
-
-	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
-
-	return ret;
-}
-
-void adc2_dma_rxcplt_callback(void){
-	adc_data_index += 1;
-	adc_dma_status = 1;
-}
-
-void adc2_dma_err_callback(void){
-    adc_dma_status = -1;
-    st_adc_stop();
-}
-
-void adc1_dma_rxcplt_callback(void){
-	if(LL_DMA_IsActiveFlag_TC1(DMA1)){
-		LL_DMA_ClearFlag_GI1(DMA1);
-		adc_data_index += 1;
-		adc_dma_status = 1;
-	}
-}
-
-void adc1_dma_err_callback(void){
-    adc_dma_status = -1;
-    st_adc_stop();
-}
 #endif
+
+	HAL_ADC_IRQHandler(&AdcHandle);
+}
+
 
 /* USER CODE END 1 */
 

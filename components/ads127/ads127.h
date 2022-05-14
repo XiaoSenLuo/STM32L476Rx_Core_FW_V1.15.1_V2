@@ -20,6 +20,41 @@ typedef struct _ads_drv{
 	void    (*delay)(uint32_t);
 }ads_drv_t;
 
+typedef struct ads127_dev_s{
+    union{
+    	struct{
+    		uint8_t dev_id : 4;
+    		uint8_t rev_id : 4;
+    	};
+    	uint8_t val;
+    }id;
+    union{
+    	struct{
+    		uint8_t crcb : 1;
+    		uint8_t cs_enb : 1;
+    		uint8_t spi_out : 1;
+    		uint8_t tout_del : 1;
+    		uint8_t ofc : 1;
+    		uint8_t fsc : 1;
+    		uint8_t bit6 : 1;
+    		uint8_t bit7 : 1;
+    	};
+    	uint8_t val;
+    }config;
+    uint8_t ofc[3];
+    uint8_t fsc[2];
+    union{
+    	struct{
+    		uint8_t fsmode : 1;
+    		uint8_t format : 1;
+    		uint8_t filter : 2;
+    		uint8_t osr : 2;
+    		uint8_t hr : 1;
+    		uint8_t bit7 : 1;
+    	};
+    	uint8_t val;
+    }mode;
+}ads127_dev_t;
 
 typedef uint8_t (*ads_write_func_t)(uint8_t*, uint16_t);
 typedef uint8_t (*ads_read_func_t)(uint8_t*, uint16_t);
@@ -96,6 +131,8 @@ void ads_drv_init(ads_write_func_t write_func, ads_read_func_t read_func, ads_wr
  */
 void ads_set_nums(uint8_t in_ads_num);
 
+void ads_set_conver_rate(uint32_t rate, uint16_t osr);
+
 
 /**
  * return: 0-success
@@ -122,40 +159,6 @@ uint8_t ads_command_start(void);
 uint8_t ads_command_stop(void);
 uint8_t ads_command_reset(void);
 
-/***
- * tx_ptr: tx buffer, if it is NULL, then will use default tx buffer
- * rx_ptr: rx buffer, if it is NULL, then will use default rx buffer
- * in_size: buffer size, if it is 0, then will use default size.
- */
-uint8_t ads_read_data_by_dma_init(uint8_t *tx_ptr, uint8_t *rx_ptr, uint16_t in_size);
-void ads_register_drdy_callback(void *callback_function);
-
-/**
- * in_size: number of ads127
- *
- * out_cal_value: 补码
- *
- */
-uint8_t ads_bsp_calibrate(uint32_t *out_cal_value, uint8_t in_size);
-
-uint8_t ads_get_read_status(void);
-void ads_read_data_complete(void);
-void ads_bsp_selete_cs_by_index(uint8_t in_index, uint8_t in_value);
-void ads_bsp_pin_stop(void);
-void ads_bsp_pin_start(void);
-void ads_bsp_power(uint8_t in_status);
-
-
-/**
- * FATFS支持
- */
-uint8_t ads_save_data_to_file(void* in_file, void* in_parma);
-
-
-uint8_t ads_user_read_fild(uint8_t in_fild);
-uint8_t ads_data_is_buffer_full(void);
-
-uint8_t* get_ads_data_buffer(void);
 
 
 #endif /* ADS127_ADS127_H_ */

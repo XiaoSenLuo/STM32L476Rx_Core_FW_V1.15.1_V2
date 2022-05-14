@@ -76,6 +76,8 @@ void lptim2_use_for_ads_clk(uint32_t in_clk_freq){
 	uint32_t _lptim_clk = 0, _div = 0, _lptim_cmr = 0, _lptim_arr = 0;
 	lptim_deinit(LPTIM2);
 
+	if(in_clk_freq == 0) return;
+
 	LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_NOCLOCK, LL_RCC_MCO1_DIV_16);
 
 	LL_RCC_SetLPTIMClockSource(LL_RCC_LPTIM2_CLKSOURCE_PCLK1);

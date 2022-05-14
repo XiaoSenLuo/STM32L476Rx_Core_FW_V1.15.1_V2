@@ -9,7 +9,12 @@
 #include "main.h"
 
 #include "ads127.h"
+#include "bsp_ads127.h"
+#include "stm32l4xx_it.h"
 
+#include "stdbool.h"
+
+#if(1)
 #define ADS_DATA_INDEX_SIZE                   (8)
 
 #if(ADS_CONNECT_MODE == ADS_CASCADED_MODE)
@@ -44,17 +49,31 @@ static volatile uint32_t ads_data_index __attribute__((section(".ram2"))) = 8;
 static volatile uint8_t ads_user_fild __attribute__((section(".ram2"))) = 0;
 static volatile uint8_t ads_read_status __attribute__((section(".ram2"))) = 0;
 
+static volatile uint8_t _lock = 0;
+
+static inline void lock_buffer(void){
+	_lock = 1;
+}
+
+static inline void unlock_buffer(void){
+    _lock = 0;
+}
+
+static inline bool is_lock_buffer(void){
+	return _lock;
+}
+
 static ads_data_t ads_data_buf = {0};
 static ads_data_t ads_user_buf = {0};
 
 static volatile struct tm ads_data_timestamp = { 0 };
 extern ads_drv_t ads_drv;
 
-extern uint32_t ads_conver_rate;
-extern uint32_t ads_osr;
+ads_config_t ads_config = {.conver_rate = 2000, .osr = 32};
+
 
 static volatile uint8_t ads_conver_control __attribute__((section(".ram2"))) = 0;
-static volatile uint32_t ads_drdy_count __attribute__((section(".ram2"))) = 0;
+volatile uint32_t ads_drdy_count __attribute__((section(".ram2"))) = 0;
 
 #if(ADS_CONNECT_MODE == ADS_DAISYCHAIN_MODE)
 static void ads_send_rdata_command_cplt_callback(void);
@@ -64,6 +83,31 @@ static uint8_t _waitfor_spi1_alldone(void);
 static uint8_t ads_start_receive_data(uint8_t *in_rx_ptr, uint16_t in_size);
 static void ads_read_data_cplt_callback(void);
 static void ads_data_ready_callback(void);
+
+
+void ads_set_conver_rate(uint32_t rate, uint16_t osr){
+	ads_config.conver_rate = rate;
+	ads_config.osr = osr;
+    uint32_t clk = 0;
+
+	if((ads_config.conver_rate * ads_config.osr) <= 100000){   // 不满足最低 100KHz
+		if(ads_config.conver_rate * ads_config.osr == 0){
+		    clk = 0;   // 关闭采样时钟
+		}else{
+			clk = 128000;   // 采样主时钟  >=100KHz
+		}
+	}else clk = ads_config.conver_rate * ads_config.osr;
+
+	lptim2_use_for_ads_clk(clk);    // 设置采样时钟频率
+
+    if(ads_config.conver_rate < (clk / ads_config.osr)){  // 采样率小于最小值, 设定最小采样率, 间隔取采样值
+        ads_conver_control = (clk / ads_config.osr / ads_config.conver_rate) + 1;
+    }else{
+    	ads_conver_control = 0;
+    }
+
+	ads_drdy_count = 0;
+}
 
 
 static void _ads_delay(uint32_t _delay){
@@ -325,7 +369,7 @@ static void ads_read_data_cplt_callback(void){
 			_waitfor_spi1_rxcplt();
 			LL_SPI_DisableDMAReq_RX(SPI1);
 			LL_SPI_Disable(SPI1);
-			ads_bsp_selete_cs_by_index(ads_index, RESET);
+			ads_bsp_selete_cs_by_index(ads_index);
 #if(ADS_READ_DATA_IN_COMMAND)
 		    ads_start_receive_data(&ads_rdata_buffer[ADS_DMA_TS + 1], (ADS_DMA_TS));
 #else
@@ -342,7 +386,7 @@ static void ads_read_data_cplt_callback(void){
 			LL_AHB1_GRP1_DisableClock(LL_AHB1_GRP1_PERIPH_DMA1); // 关闭DMA1时钟
 			ads_read_status &= (~ADS_READING);
 			ads_read_status |= (ADS_READ_COMPLETE);
-            rtc_reset_ads_timeout();
+
 #if(ADS_READ_DATA_IN_COMMAND)
 #if(ADS_TIMESTAMP)
 			ads_cpoy_data_to_buffer((uint8_t*)data_ptr, &ads_rdata_buffer[1], ADS_DMA_TS);     // 复制数据到缓冲区
@@ -463,12 +507,12 @@ static void ads_send_rdata_command_cplt_callback(void){
 static void ads_data_ready_callback(void){
 	if((LL_GPIO_ReadInputPort(EXTI_DRDY_GPIO_Port) & EXTI_DRDY_Pin) == 0){  // 低电平
 		ads_drdy_count += 1;
-	    if((ads_conver_control) && (!(!(ads_drdy_count % ads_conver_control)))) return;
+	    if((ads_conver_control) && (ads_drdy_count % ads_conver_control)) return;
 
 		if(ads_data_index <= 8){// 第一个数据打时间戳
 			st_rtc_get_time((struct tm*)&ads_data_timestamp);
 	        ads_data_buf.timestamp = ((uint32_t)((ads_data_timestamp.tm_year + 1900) - 2020) << 26) | ((uint32_t)ads_data_timestamp.tm_mon << 22) |
-	    			((uint32_t)ads_data_timestamp.tm_yday << 17) |
+	    			((uint32_t)ads_data_timestamp.tm_mday << 17) |
 					((uint32_t)ads_data_timestamp.tm_hour << 12) | ((uint32_t)ads_data_timestamp.tm_min << 6) | (ads_data_timestamp.tm_sec);
 //	        ads_user_buf.timestamp = ads_data_buf.timestamp;
 	        ads_data_buf.index += 1;
@@ -476,7 +520,7 @@ static void ads_data_ready_callback(void){
 	    if((!(ads_read_status & ADS_READING))){
 	    	ads_read_status |= (ADS_READING);
 	    	ads_read_status &= (~ADS_READ_COMPLETE);
-	    	ads_bsp_selete_cs_by_index(0, RESET);
+	    	ads_bsp_selete_cs_by_index(0);
 	        ads_start_receive_data(ads_rdata_buffer, (ADS_DMA_TS));
 	    }
 	}
@@ -520,13 +564,6 @@ uint8_t ads_read_data_by_dma_init(uint8_t *tx_ptr, uint8_t *rx_ptr, uint16_t in_
     // 注册读取数据回调函数
     st_exti_irq_handler_register(EXTI_DRDY_EXTI_IRQn, 7, ads_data_ready_callback);
 
-    if(ads_conver_rate < (128000 / ads_osr)){  // 采样率小于最小值, 设定最小采样率, 间隔取采样值
-        ads_conver_control = (128000 / ads_osr / ads_conver_rate) + 1;
-        ads_drdy_count = 0;
-    }else{
-    	ads_conver_control = 0;
-        ads_drdy_count = 0;
-    }
 #if(ADS_READ_DATA_IN_COMMAND)
     if(in_size)
     	_size = in_size;
@@ -650,6 +687,9 @@ uint8_t ads_save_data_to_file(void* in_file, void* in_parma){
     FIL *_fil_ptr = NULL;
 
     _fil_ptr = (FIL*)in_file;
+
+    if(!ads_data_is_buffer_full()) return 255;
+    if(_fil_ptr->obj.fs == NULL) return FR_INVALID_OBJECT;
     ads_user_fild = 0x01;
 
     if(*(uint8_t*)in_parma){     // 保存成 bin
@@ -665,13 +705,27 @@ uint8_t ads_save_data_to_file(void* in_file, void* in_parma){
     	ret = f_write(_fil_ptr, (uint8_t*)user_ptr, ads_data_length, NULL);
 #endif
     }else{                       // 保存成 txt
-    	uint8_t *_ascii_txt = NULL;
-
-    	if(_ascii_txt == NULL){
-    		return 1;
-    	}else{
-    		goto fatfs_sync_section;
-    	}
+#define TXT_BUFF_SIZE          2048
+    	char _ascii_txt[TXT_BUFF_SIZE + 1];
+    	uint8_t *ptr = &user_ptr[0];
+    	uint32_t len = 0, ads_len = ads_data_length, data_size = 0;
+    	len = data_to_str(ptr, 8, _ascii_txt, TXT_BUFF_SIZE + 1);
+    	ret = f_write(_fil_ptr, _ascii_txt, len, NULL);
+    	ads_len -= 8;
+        ptr += 8;
+        do{
+            if(ads_len >= (TXT_BUFF_SIZE >> 1)){
+            	data_size = (TXT_BUFF_SIZE >> 1);
+                ads_len -= (TXT_BUFF_SIZE >> 1);
+            }else{
+            	data_size = ads_len;
+                ads_len -= ads_len;
+            }
+            len = data_to_str(ptr, data_size, _ascii_txt, TXT_BUFF_SIZE + 1);  // HEX----->TXT: 一个数据占两个字节
+            ptr += data_size;          // 偏移数据地址
+            ret = f_write(_fil_ptr, _ascii_txt, len, NULL);
+        }while(ads_len);
+#undef TXT_BUFF_SIZE
     }
 fatfs_sync_section:
     if(ads_data_ready & ADS_DATA_BUF_FULL) ads_data_ready &= (~ADS_DATA_BUF_FULL);   // 清除缓存区状态
@@ -717,8 +771,7 @@ void ads_bsp_pin_stop(void){
 	ADS_Stop_Convert();
 }
 
-void ads_bsp_selete_cs_by_index(uint8_t in_index, uint8_t in_value){
-	UNUSED(in_value);
+void ads_bsp_selete_cs_by_index(uint8_t in_index){
     switch(in_index){
     case 0:
     	LL_GPIO_ResetOutputPin(ADS_CS_GPIO_Port, ADS_CS_Pin);
@@ -745,7 +798,7 @@ static void ads_cal_data_ready_callback(void){
 	if((LL_GPIO_ReadInputPort(EXTI_DRDY_GPIO_Port) & EXTI_DRDY_Pin) == 0){    // 低电平
 	    if((!(ads_read_status & ADS_READING)) && (!ads_index)){
 	    	ads_read_status |= (ADS_READING);
-	    	ads_bsp_selete_cs_by_index(0, RESET);
+	    	ads_bsp_selete_cs_by_index(0);
 	        ads_start_receive_data(ads_rdata_buffer, (ADS_DMA_TS));
 	    }
 	}
@@ -767,7 +820,7 @@ static void ads_cal_data_cplt_callback(void){
 			_waitfor_spi1_rxcplt();
 			LL_SPI_DisableDMAReq_RX(SPI1);
 			LL_SPI_Disable(SPI1);
-			ads_bsp_selete_cs_by_index(ads_index, RESET);
+			ads_bsp_selete_cs_by_index(ads_index);
 #if(ADS_READ_DATA_IN_COMMAND)
 			memcpy(&ads_data_buffer[ads_data_index], &ads_rdata_buffer[1], 3);      // 通道1
 			ads_start_receive_data(ads_rdata_buffer, (ADS_DMA_TS));
@@ -854,3 +907,334 @@ uint8_t ads_bsp_calibrate(uint32_t *out_cal_value, uint8_t in_size){
     }
     return ret;
 }
+
+
+#else
+
+extern ads_drv_t ads_drv;
+static void _ads_delay(uint32_t _delay){
+	HAL_Delay(_delay);
+}
+
+void ads_drv_init(ads_write_func_t write_func, ads_read_func_t read_func, ads_write_read_func_t wr_func){
+
+    if(write_func != NULL){
+    	ads_drv.write = write_func;
+    }else{
+    	return;
+    }
+    if(read_func != NULL){
+    	ads_drv.read = read_func;
+    }else{
+    	return;
+    }
+    if(wr_func != NULL){
+    	ads_drv.write_read = wr_func;
+    }
+    ads_drv.delay = _ads_delay;
+}
+
+
+static uint8_t rdata_buffer[8] = {0};
+
+
+void ads_bsp_pin_stop(void){
+	ADS_Stop_Convert();
+}
+void ads_bsp_pin_start(void){
+	if(LL_LPTIM_IsActiveFlag_ARRM(LPTIM2)) LL_LPTIM_ClearFLAG_ARRM(LPTIM2);
+    while(LL_LPTIM_IsActiveFlag_ARRM(LPTIM2) != SET);
+    ADS_Start_Convert();
+    while(LL_GPIO_IsOutputPinSet(ADS_START_GPIO_Port, ADS_START_Pin) != SET){
+    	__NOP();
+    }
+}
+void ads_bsp_power(uint8_t in_status){
+	if(in_status == SET){
+		V5_ON();
+	}else{
+		V5_OFF();
+	}
+}
+
+void ads_set_conver_rate(uint32_t rate, uint16_t osr){
+
+    uint32_t clk = 0;
+
+	if((rate * osr) <= 100000){   // 不满足最低 100KHz
+		if(rate * osr == 0){
+		    clk = 0;   // 关闭采样时钟
+		}else{
+			clk = 128000;   // 采样主时钟  >=100KHz
+		}
+	}else clk = rate * osr;
+
+	lptim2_use_for_ads_clk(clk);    // 设置采样时钟频率
+
+//    if(ads_config.conver_rate < (clk / ads_config.osr)){  // 采样率小于最小值, 设定最小采样率, 间隔取采样值
+////        ads_conver_control = (clk / ads_config.osr / ads_config.conver_rate) + 1;
+//    }else{
+////    	ads_conver_control = 0;
+//    }
+
+//	ads_drdy_count = 0;
+}
+
+void ads_bsp_selete_cs_by_index(uint8_t in_index){
+    switch(in_index){
+    case 0:
+    	LL_GPIO_ResetOutputPin(ADS_CS_GPIO_Port, ADS_CS_Pin);
+    	break;
+    case 1:
+    	LL_GPIO_SetOutputPin(ADS_CS_GPIO_Port, ADS_CS_Pin);
+    	break;
+    default:
+    	LL_GPIO_ResetOutputPin(ADS_CS_GPIO_Port, ADS_CS_Pin);
+    	break;
+    }
+}
+
+
+static void spi1_irq_handler(void){
+	uint32_t _sr = 0, _cr2 = 0;
+	_sr = SPI1->SR;
+	_cr2 = SPI1->CR2;
+
+	if((_sr & SPI_SR_TXE) && (_cr2 & SPI_CR2_TXEIE)){
+
+	}
+	if(!(_sr & SPI_SR_OVR) && (_sr & SPI_SR_RXNE) && (_cr2 & SPI_CR2_RXNEIE)){
+
+	}
+	if((_cr2 & SPI_CR2_ERRIE) && ((_sr & SPI_SR_MODF) || (_sr & SPI_SR_OVR) || (_sr & SPI_SR_FRE))){
+		if(_sr & SPI_SR_MODF){
+			spi_internal_slave_selete(SPI1, SET);
+            LL_SPI_ClearFlag_MODF(SPI1);
+		}
+		if(_sr & SPI_SR_OVR){
+            LL_SPI_ClearFlag_OVR(SPI1);
+		}
+		if(_sr & SPI_SR_FRE){
+            LL_SPI_ClearFlag_FRE(SPI1);
+		}
+	}
+}
+
+static void spi1_tx_dma_irq_handler(void){
+
+}
+
+static uint8_t _index = 0;
+static void spi1_rx_dma_irq_handler(void){
+    if(LL_DMA_IsActiveFlag_HT2(DMA1)){
+//    	LL_SPI_Disable(SPI1);
+//    	ads_bsp_selete_cs_by_index(1);
+    	LL_DMA_ClearFlag_HT2(DMA1);
+//    	READ_REG(*((__IO uint16_t *)&SPI1->DR));
+//    	LL_SPI_Enable(SPI1);
+    }
+    if(LL_DMA_IsActiveFlag_TC2(DMA1)){
+    	LL_SPI_Disable(SPI1);
+    	LL_DMA_ClearFlag_GI2(DMA1);
+    	_index += 1;
+		uint8_t tmp[8];
+		memcpy(tmp, rdata_buffer, 4);
+    	if(_index == 1){
+        	ads_bsp_selete_cs_by_index(1);
+        	LL_DMA_ClearFlag_GI2(DMA1);
+        	LL_SPI_Enable(SPI1);
+    	}
+
+//    	uint8_t tmp[8];
+//    	memcpy(tmp, rdata_buffer, 4);
+//    	READ_REG(*((__IO uint16_t *)&SPI1->DR));
+//    	memset(rdata_buffer, 0, 8);
+    }
+}
+
+static void ads_drdy_irq_handler(void){
+	if((LL_GPIO_ReadInputPort(EXTI_DRDY_GPIO_Port) & EXTI_DRDY_Pin) == 0){
+		ads_bsp_selete_cs_by_index(0);
+		READ_REG(*((__IO uint16_t *)&SPI1->DR));  // 清空
+		_index = 0;
+
+        LL_SPI_Enable(SPI1);
+	}
+}
+
+static void _spi1_tx_dma_config(uint8_t *ptr, uint16_t _s){  // DMA1 Channel3; Request 1
+
+	/* (1) Enable the clock of DMA1 and DMA1 */
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+
+	/* (2) Configure NVIC for DMA transfer complete/error interrupts */
+
+	NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+	LL_DMA_ClearFlag_GI3(DMA1);
+	/* (3) Configure the DMA1_Channel2 functional parameters */
+	LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_3,
+			            LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
+						LL_DMA_PRIORITY_HIGH |
+						LL_DMA_MODE_NORMAL |
+						LL_DMA_PERIPH_NOINCREMENT |
+						LL_DMA_MEMORY_INCREMENT |
+						LL_DMA_PDATAALIGN_BYTE |
+						LL_DMA_MDATAALIGN_BYTE);
+
+	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
+			(uint32_t)ptr,  // 源地址
+			LL_SPI_DMA_GetRegAddr(SPI1),                // 目的地址
+			LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, _s);
+
+
+	if(LL_DMA_GetPeriphRequest(DMA1, LL_DMA_CHANNEL_3) != LL_DMA_REQUEST_1)
+		LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMA_REQUEST_1);
+
+	/* (5) Enable DMA interrupts complete/error */
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
+	LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
+
+	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+}
+
+static void _spi1_rx_dma_config(uint8_t *ptr, uint16_t _s){   // DMA1 Channel2; Request 1
+	/* (1) Enable the clock of DMA1 and DMA1 */
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+
+	/* (2) Configure NVIC for DMA transfer complete/error interrupts */
+	NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+
+	LL_DMA_ClearFlag_GI2(DMA1);
+	/* (3) Configure the DMA1_Channel2 functional parameters */
+	LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2,
+			            LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
+						LL_DMA_PRIORITY_HIGH |
+						LL_DMA_MODE_CIRCULAR |
+						LL_DMA_PERIPH_NOINCREMENT |
+						LL_DMA_MEMORY_INCREMENT |
+						LL_DMA_PDATAALIGN_BYTE |
+						LL_DMA_MDATAALIGN_BYTE);
+
+	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2,
+			LL_SPI_DMA_GetRegAddr(SPI1),  // 源地址
+			(uint32_t)ptr,                // 目的地址
+			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, _s);
+
+	if(LL_DMA_GetPeriphRequest(DMA1, LL_DMA_CHANNEL_2) != LL_DMA_REQUEST_1)
+		LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_2, LL_DMA_REQUEST_1);
+
+	/* (5) Enable DMA interrupts complete/error */
+
+	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_2);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
+	LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
+
+	LL_DMA_EnableChannel(DMA1,  LL_DMA_CHANNEL_2);
+}
+
+
+void ads_config_spi_init(void){
+	LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    LL_SPI_DeInit(SPI1);
+
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
+
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+	GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
+	LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
+
+	/* Configure SPI1 communication */
+	LL_SPI_SetBaudRatePrescaler(SPI1, LL_SPI_BAUDRATEPRESCALER_DIV8); // 时钟分频, spi时钟频率 = PCLK2 / baudrate_presacler;
+	LL_SPI_SetTransferDirection(SPI1,LL_SPI_FULL_DUPLEX);   // 全双工
+	LL_SPI_SetClockPhase(SPI1, LL_SPI_PHASE_2EDGE);         // 相位
+	LL_SPI_SetClockPolarity(SPI1, LL_SPI_POLARITY_LOW);     // 极性
+	/* Reset value is LL_SPI_MSB_FIRST */
+	LL_SPI_SetTransferBitOrder(SPI1, LL_SPI_MSB_FIRST);     // 高位先出
+	LL_SPI_SetDataWidth(SPI1, LL_SPI_DATAWIDTH_8BIT);       // 数据宽度 8bit
+	LL_SPI_SetNSSMode(SPI1, LL_SPI_NSS_SOFT);               // 软件片选
+	LL_SPI_SetRxFIFOThreshold(SPI1, LL_SPI_RX_FIFO_TH_QUARTER);  //8bit
+	LL_SPI_SetMode(SPI1, LL_SPI_MODE_MASTER);               // 主机
+	LL_SPI_DisableCRC(SPI1);
+//	LL_SPI_Enable(SPI1);
+
+	HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+	HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+
+	LL_SPI_EnableIT_ERR(SPI1);
+	st_irq_handler_register(SPI1_IRQn, spi1_irq_handler);
+}
+
+
+
+void ads_rdata_spi_init(void){
+	LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    LL_SPI_DeInit(SPI1);
+
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
+
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+	GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
+	LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
+
+	/* Configure SPI1 communication */
+	LL_SPI_SetBaudRatePrescaler(SPI1, LL_SPI_BAUDRATEPRESCALER_DIV8); // 时钟分频, spi时钟频率 = PCLK2 / baudrate_presacler;
+	LL_SPI_SetTransferDirection(SPI1,LL_SPI_SIMPLEX_RX);   // Only Rx
+	LL_SPI_SetClockPhase(SPI1, LL_SPI_PHASE_2EDGE);         // 相位
+	LL_SPI_SetClockPolarity(SPI1, LL_SPI_POLARITY_LOW);     // 极性
+	/* Reset value is LL_SPI_MSB_FIRST */
+	LL_SPI_SetTransferBitOrder(SPI1, LL_SPI_MSB_FIRST);     // 高位先出
+	LL_SPI_SetDataWidth(SPI1, LL_SPI_DATAWIDTH_8BIT);       // 数据宽度 8bit
+	LL_SPI_SetNSSMode(SPI1, LL_SPI_NSS_SOFT);               // 软件片选
+	LL_SPI_SetRxFIFOThreshold(SPI1, LL_SPI_RX_FIFO_TH_QUARTER);  //8bit
+	LL_SPI_SetMode(SPI1, LL_SPI_MODE_MASTER);               // 主机
+	LL_SPI_DisableCRC(SPI1);
+
+	LL_SPI_EnableDMAReq_RX(SPI1);
+
+	HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+	HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+
+	LL_SPI_EnableIT_ERR(SPI1);
+	st_irq_handler_register(SPI1_IRQn, spi1_irq_handler);
+}
+
+uint8_t ads_read_data_by_dma_init(uint8_t *tx_ptr, uint8_t *rx_ptr, uint16_t in_size){
+
+	ads_rdata_spi_init();
+
+    st_exti_irq_handler_register(EXTI_DRDY_EXTI_IRQn, 7, ads_drdy_irq_handler);
+    st_irq_handler_register(DMA1_Channel2_IRQn, spi1_rx_dma_irq_handler);  // RX
+    st_irq_handler_register(DMA1_Channel3_IRQn, spi1_tx_dma_irq_handler);
+
+
+
+    _spi1_rx_dma_config(rdata_buffer, 4);
+	return 0;
+}
+
+uint8_t ads_save_data_to_file(void* in_file, void* in_parma){
+
+	return 1;
+}
+
+#endif

@@ -50,11 +50,11 @@ static void output_gpio_init(void){
 	LED_OFF();
 
     // VBUS_EN
-	LL_GPIO_SetPinMode(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_MODE_OUTPUT);
-	LL_GPIO_SetPinPull(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_PULL_DOWN);
-	LL_GPIO_SetPinOutputType(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_OUTPUT_PUSHPULL);
-	LL_GPIO_SetPinSpeed(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_SPEED_FREQ_LOW);
-	LL_GPIO_ResetOutputPin(VBUS_EN_GPIO_Port, VBUS_EN_Pin);
+//	LL_GPIO_SetPinMode(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_MODE_OUTPUT);
+	LL_GPIO_SetPinPull(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_PULL_UP);
+//	LL_GPIO_SetPinOutputType(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_OUTPUT_PUSHPULL);
+//	LL_GPIO_SetPinSpeed(VBUS_EN_GPIO_Port, VBUS_EN_Pin, LL_GPIO_SPEED_FREQ_LOW);
+	LL_GPIO_SetOutputPin(VBUS_EN_GPIO_Port, VBUS_EN_Pin);
 
     // VSD_EN
 	LL_GPIO_SetPinMode(VSD_EN_GPIO_Port, VSD_EN_Pin, LL_GPIO_MODE_OUTPUT);
@@ -98,22 +98,15 @@ static void output_gpio_init(void){
 	LL_GPIO_SetPinSpeed(V5_EN_GPIO_Port, V5_EN_Pin, LL_GPIO_SPEED_FREQ_LOW);
 	LL_GPIO_ResetOutputPin(V5_EN_GPIO_Port, V5_EN_Pin);
 
-	// HSE OSC EN Pin
-	LL_GPIO_SetPinMode(HSE_OSC_EN_Port, HSE_OSC_EN_Pin, LL_GPIO_MODE_OUTPUT);
-	LL_GPIO_SetPinPull(HSE_OSC_EN_Port, HSE_OSC_EN_Pin, LL_GPIO_PULL_UP);
-	LL_GPIO_SetPinOutputType(HSE_OSC_EN_Port, HSE_OSC_EN_Pin, LL_GPIO_OUTPUT_PUSHPULL);
-	LL_GPIO_SetPinSpeed(HSE_OSC_EN_Port, HSE_OSC_EN_Pin, LL_GPIO_SPEED_FREQ_LOW);
-	LL_GPIO_ResetOutputPin(HSE_OSC_EN_Port, HSE_OSC_EN_Pin);
-
 }
 
 static void input_gpio_init(void){
 	LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-	// SD_CD
-//	GPIO_InitStruct.Pin = SD_CD_Pin;
-//	GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-//	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-//	LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+	 // SD_CD
+	GPIO_InitStruct.Pin = SD_CD_Pin;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+	LL_GPIO_Init(SD_CD_GPIO_Port, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = LL_GPIO_PIN_4 | LL_GPIO_PIN_5;
 	GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
@@ -255,15 +248,54 @@ void MX_GPIO_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOD);
 
   output_gpio_init();
-  input_gpio_init();
-  exit_gpio_init();
-  optimize_gpio_power(GPIOA, LL_GPIO_PIN_6 | LL_GPIO_PIN_7 | LL_GPIO_PIN_8 | LL_GPIO_PIN_9 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11);
-  optimize_gpio_power(GPIOB, LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_8 | LL_GPIO_PIN_9 |LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_15);
-  optimize_gpio_power(GPIOC, LL_GPIO_PIN_1 | LL_GPIO_PIN_7);
+//  input_gpio_init();
+//  exit_gpio_init();
+//  optimize_gpio_power(GPIOA, LL_GPIO_PIN_6 | LL_GPIO_PIN_7 | LL_GPIO_PIN_8 | LL_GPIO_PIN_9 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11);
+//  optimize_gpio_power(GPIOB, LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_8 | LL_GPIO_PIN_9 |LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_15);
+//  optimize_gpio_power(GPIOC, LL_GPIO_PIN_1 | LL_GPIO_PIN_7);
 }
 
 /* USER CODE BEGIN 2 */
+void gpio_all_set_analog(void){
+	LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
+	/* GPIO Ports Clock Enable */
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOH);
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
+
+	/**/
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_13|LL_GPIO_PIN_15|LL_GPIO_PIN_0|LL_GPIO_PIN_1
+						  |LL_GPIO_PIN_2|LL_GPIO_PIN_3|LL_GPIO_PIN_4|LL_GPIO_PIN_5
+						  |LL_GPIO_PIN_6|LL_GPIO_PIN_7;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
+	LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+	/**/
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_1;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
+	LL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+
+	/**/
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1|LL_GPIO_PIN_2|LL_GPIO_PIN_3
+						  |LL_GPIO_PIN_9|LL_GPIO_PIN_10|LL_GPIO_PIN_11|LL_GPIO_PIN_12
+						  |LL_GPIO_PIN_15;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
+	LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	/**/
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1|LL_GPIO_PIN_2|LL_GPIO_PIN_10
+						  |LL_GPIO_PIN_11|LL_GPIO_PIN_12|LL_GPIO_PIN_13|LL_GPIO_PIN_14
+						  |LL_GPIO_PIN_15|LL_GPIO_PIN_3|LL_GPIO_PIN_4|LL_GPIO_PIN_5
+						  |LL_GPIO_PIN_6|LL_GPIO_PIN_7|LL_GPIO_PIN_8|LL_GPIO_PIN_9;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
+	LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
 /* USER CODE END 2 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

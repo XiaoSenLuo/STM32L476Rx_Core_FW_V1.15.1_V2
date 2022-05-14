@@ -28,7 +28,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdint.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -83,14 +83,21 @@ void LPTIM2_IRQHandler(void);
 void FPU_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 void RTC_Alarm_IRQHandler(void);
-void USART1_IRQHandler(void);
-void UART4_IRQHandler(void);
-void USART3_IRQHandler(void);
+void OTG_FS_IRQHandler(void);
 
 typedef void (*st_irq_handler_callback_t)(void);
 
-void st_irq_handler_register(uint32_t _irq_num, void *_handler);
-void st_exti_irq_handler_register(uint32_t _irq_num, uint32_t _exti_line, void *_handler);
+typedef void (*isr_function_handle_t)(void* ctx);
+
+void ll_peripheral_isr_install(IRQn_Type _irq_num, isr_function_handle_t fn, void *ctx);
+void ll_peripheral_isr_uninstall(IRQn_Type _irq_num);
+void ll_gpio_exti_isr_install(int gpio, isr_function_handle_t fn, void *ctx);
+void ll_gpio_exti_isr_uninstall(int gpio);
+
+
+void st_irq_handler_register(IRQn_Type _irq_num, void *_handler);
+void st_exti_irq_handler_register(IRQn_Type _irq_num, uint32_t _exti_line, void *_handler);
+
 
 /* USER CODE END EFP */
 

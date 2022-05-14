@@ -28,6 +28,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "stm32l4xx_ll_usart.h"
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 extern UART_HandleTypeDef huart4;
@@ -43,33 +44,36 @@ extern UART_HandleTypeDef huart1;
 //void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-void uart_stop(USART_TypeDef * in_uart);
-void uart_init(USART_TypeDef * in_uart, uint32_t _baurate);
 
-uint8_t uart_is_idle(USART_TypeDef* in_uart);
+void USART1_IRQHandler(void);
+void UART4_IRQHandler(void);
+void USART3_IRQHandler(void);
+
+void uart_init(USART_TypeDef * in_uart, uint32_t _baurate);
+void uart_deinit(USART_TypeDef * in_uart);
 
 void uart3_dma_txcplt_callback(void);
 void uart3_dma_rxcplt_callback(void);
-void uart3_idle_callback(void);
 void uart3_busy_callbcak(void);
-void uart4_dma_txcplt_callback(void);
 
 void uart3_cmd_rx_callback(void);
-void uart4_gps_rx_callback(void);
 
 uint8_t UART1_Write(uint8_t* ptr, uint16_t s);
 uint8_t UART1_Read(uint8_t* ptr, uint16_t s);
 
 uint8_t UART3_Write(uint8_t* ptr, uint16_t s);
+bool UART3_Wait_For_TC(void);
 uint8_t UART3_Read(uint8_t* ptr, uint16_t s);
 
 uint8_t UART4_Write(uint8_t* ptr, uint16_t s);
 uint8_t UART4_Read(uint8_t* ptr, uint16_t s);
 
-#define GPS_RECEIVE
-#ifdef GPS_RECEIVE
-uint8_t UART_GPS_Receice(uint8_t* ptr, uint8_t s);
-#endif
+void cmd_uart_init(uint32_t _baurate);
+void cmd_uart_deinit(void);
+
+bool cmd_sentence_is_ready(void);
+uint8_t cmd_get_sentence(uint8_t *buf, uint16_t s);
+
 
 
 /* USER CODE END Prototypes */
