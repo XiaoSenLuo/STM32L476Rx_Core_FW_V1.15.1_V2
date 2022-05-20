@@ -30,17 +30,16 @@
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "ff_gen_drv.h"
-#include "bsp_driver_sd.h"
 
-//#include "ff.h"
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
-extern const Diskio_drvTypeDef  SD_Driver;
 
 /* USER CODE BEGIN lastSection */
 /* can be used to modify / undefine previous code or add new definitions */
+
+int sd_driver_register(char* out_path);
+
 /* USER CODE END lastSection */
 
 #endif /* __SD_DISKIO_H */

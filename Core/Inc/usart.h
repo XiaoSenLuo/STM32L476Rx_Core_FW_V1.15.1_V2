@@ -27,10 +27,16 @@
 
 
 /* USER CODE BEGIN Includes */
-#include "stm32l4xx_ll_usart.h"
-#include "stdbool.h"
+#include "stm32l4xx_it.h"
+
 /* USER CODE END Includes */
 
+
+int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
+
+int usart1_start_receive(void);
+
+#if(0)
 extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart1;
 
@@ -73,7 +79,7 @@ void cmd_uart_deinit(void);
 
 bool cmd_sentence_is_ready(void);
 uint8_t cmd_get_sentence(uint8_t *buf, uint16_t s);
-
+#endif
 
 
 /* USER CODE END Prototypes */

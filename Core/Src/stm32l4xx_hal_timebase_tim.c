@@ -19,8 +19,12 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+
+#include "stm32l4xx_it.h"
+
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_tim.h"
+
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -29,6 +33,10 @@
 TIM_HandleTypeDef        htim2;
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
+
+static void tim2_update_event_callback(void* ctx){
+    HAL_TIM_IRQHandler((TIM_HandleTypeDef*)ctx);
+}
 
 /**
   * @brief  This function configures the TIM2 as a time base source.
@@ -79,6 +87,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
   if(HAL_TIM_Base_Init(&htim2) == HAL_OK)
   {
     /* Start the TIM time Base generation in interrupt mode */
+    ll_peripheral_isr_install(TIM2_IRQn, tim2_update_event_callback, &htim2);
     return HAL_TIM_Base_Start_IT(&htim2);
   }
 
@@ -135,14 +144,5 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /**
   * @brief This function handles TIM2 global interrupt.
   */
-void TIM2_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM2_IRQn 0 */
 
-  /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
-
-  /* USER CODE END TIM2_IRQn 1 */
-}
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

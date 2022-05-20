@@ -150,6 +150,19 @@ SECTIONS
     _eram2 = .;
   
   } >RAM2
+
+  .ram1 :
+  {
+    . = ALIGN(4);
+    _sram1 = .;
+    *(.ram1)
+    *(.ram1*)
+    KEEP(*(.ram1))
+    . = ALIGN(4);
+    _eram1 = .;
+
+  } >RAM
+
   /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
   .bss :

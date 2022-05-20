@@ -28,19 +28,6 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32l4xx_hal.h"
-
-#include "stm32l4xx_ll_system.h"
-#include "stm32l4xx_ll_gpio.h"
-#include "stm32l4xx_ll_exti.h"
-#include "stm32l4xx_ll_bus.h"
-#include "stm32l4xx_ll_cortex.h"
-#include "stm32l4xx_ll_rcc.h"
-#include "stm32l4xx_ll_utils.h"
-#include "stm32l4xx_ll_pwr.h"
-#include "stm32l4xx_ll_dma.h"
-#include "stm32l4xx_ll_wwdg.h"
-#include "stm32l4xx_ll_iwdg.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,28 +35,13 @@ extern "C" {
 
 
 #include "stm32l4xx_it.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
-//#include "SEGGER_RTT.h"
+
 #include "time.h"
 #include "ctype.h"
-
-#include "fatfs.h"
-#include "ads127.h"
-#include "spi.h"
-#include "usart.h"
-#include "adc.h"
-#include "lptim.h"
-#include "tim.h"
-#include "i2c.h"
-#include "gpio.h"
-#include "rtc.h"
-#include "mem_dma.h"
-#include "st_crc.h"
-#include "ini.h"
 
 #include "utils.h"
 
@@ -83,14 +55,10 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
-extern TIM_HandleTypeDef htim2;   // use for timbase
-
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
-extern __IO uint32_t task_fild;
 
 /* USER CODE END EC */
 
@@ -185,6 +153,7 @@ extern __IO uint32_t task_fild;
 #define TASK_ILDE                            0x80000000U    // 空闲统计任务
 /* USER CODE END EM */
 
+#if(0)
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 /**
@@ -212,10 +181,11 @@ uint8_t cmd_write(uint8_t* data, uint16_t len);
  * @param fmt
  * @return
  */
-uint8_t f_log_printf(FIL* _log_file, const char* fmt, ...);
+//uint8_t f_log_printf(FIL* _log_file, const char* fmt, ...);
 
 /* USER CODE BEGIN EFP */
 void system_get_device_uid(char* id, uint8_t len);
+#endif
 
 /* USER CODE END EFP */
 
@@ -289,6 +259,7 @@ void system_get_device_uid(char* id, uint8_t len);
 #define RTC_SD_WR_TIMEOUT               16
 #define RTC_ADS_READ_TIMEOUT            8
 
+#if(0)
 /**
  *
  */
@@ -425,6 +396,7 @@ void registe_config_callback(void* user, const char* section, const char* name, 
 void unregiste_config_callback(void* user, const char* section, const char* name);
 #endif
 
+#endif
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

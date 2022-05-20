@@ -28,6 +28,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "stm32l4xx_ll_rtc.h"
+#include "stm32l4xx_ll_exti.h"
 #include "time.h"
 /* USER CODE END Includes */
 

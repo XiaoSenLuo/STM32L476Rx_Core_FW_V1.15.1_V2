@@ -19,7 +19,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "rtc.h"
-#include "main.h"
+#include "stm32l4xx_ll_rcc.h"
+#include "stm32l4xx_ll_pwr.h"
 /* USER CODE BEGIN 0 */
 
 RTC_TimeTypeDef rtc_time;

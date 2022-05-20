@@ -82,7 +82,7 @@ char** get_default_config_file(void){
     return (char**)default_config;
 }
 
-
+#if(0)
 #include "ff.h"
 
 uint8_t create_default_config_file(const char *file_name){
@@ -102,3 +102,5 @@ uint8_t create_default_config_file(const char *file_name){
 	res = f_close(&_file);
     return (uint8_t)res;
 }
+
+#endif

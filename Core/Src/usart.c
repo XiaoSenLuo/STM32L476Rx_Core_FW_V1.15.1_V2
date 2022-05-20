@@ -21,9 +21,145 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-#include "main.h"
+
+#include "stm32l4xx_hal_gpio.h"
+#include "stm32l4xx_hal_dma.h"
+#include "stm32l4xx_hal_rcc.h"
+#include "stm32l4xx_it.h"
+///#include "stm32l4xx_ll_usart.h"
+
+
+#define USART1_DATA_BUFFER_SIZE               (1024)
+
+typedef struct uart_transmit_s {
+    struct{
+        uint8_t data[USART1_DATA_BUFFER_SIZE];
+        uint16_t length;
+        uint16_t position;
+    }tx;
+    struct{
+        uint8_t data[USART1_DATA_BUFFER_SIZE];
+        uint16_t length;
+        uint16_t position;
+    }rx;
+}uart_transmit_t;
+
+static uart_transmit_t uart1_transmit = {
+        .rx = {
+                .data = {0},
+                .length = USART1_DATA_BUFFER_SIZE >> 1,
+                .position = 0,
+                },
+        .tx = {
+                .data = {0},
+                .length = USART1_DATA_BUFFER_SIZE >> 1,
+                .position = 0,
+                },
+};
+
+
+static UART_HandleTypeDef huart1 = { 0 };
+static DMA_HandleTypeDef hdma_usart1_rx = {0};
+static DMA_HandleTypeDef hdma_usart1_tx = {0};
+
+static void dma_usart1_tx_isr_handler(void* ctx){
+    HAL_DMA_IRQHandler((DMA_HandleTypeDef*)ctx);
+}
+
+static void dma_usart1_rx_isr_handler(void* ctx){
+    HAL_DMA_IRQHandler((DMA_HandleTypeDef*)ctx);
+}
+
+static void usart1_isr_handler(void* ctx){
+    HAL_UART_IRQHandler((UART_HandleTypeDef*)ctx);
+}
+
+
+int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+    PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK){}
+
+    __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    /**USART1 GPIO Configuration
+        PB6     ------> USART1_TX
+        PB7     ------> USART1_RX
+   */
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_6 | GPIO_PIN_7);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    /* USART1 DMA Init */
+    /* USART1_RX Init */
+    hdma_usart1_rx.Instance = DMA1_Channel5;
+    hdma_usart1_rx.Init.Request = DMA_REQUEST_2;
+    hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_usart1_rx.Init.Mode = DMA_CIRCULAR;
+    hdma_usart1_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    HAL_DMA_Init(&hdma_usart1_rx);
+    __HAL_LINKDMA(&huart1, hdmarx, hdma_usart1_rx);
+
+    /* USART1_TX Init */
+    hdma_usart1_tx.Instance = DMA1_Channel4;
+    hdma_usart1_tx.Init.Request = DMA_REQUEST_2;
+    hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_usart1_tx.Init.Mode = DMA_NORMAL;
+    hdma_usart1_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    HAL_DMA_Init(&hdma_usart1_tx);
+    __HAL_LINKDMA(&huart1, hdmatx, hdma_usart1_tx);
+
+    ll_peripheral_isr_install(DMA1_Channel4_IRQn, dma_usart1_tx_isr_handler, huart1.hdmatx);
+    ll_peripheral_isr_install(DMA1_Channel5_IRQn, dma_usart1_rx_isr_handler, huart1.hdmarx);
+    ll_peripheral_isr_install(USART1_IRQn, usart1_isr_handler, &huart1);
+
+    HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+    HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+    HAL_NVIC_SetPriority(USART1_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+
+    huart1.Instance = USART1;
+    huart1.Init.BaudRate = baud;
+    huart1.Init.WordLength = UART_WORDLENGTH_8B;
+    huart1.Init.StopBits = UART_STOPBITS_1;
+    huart1.Init.Parity = UART_PARITY_NONE;
+    huart1.Init.Mode = UART_MODE_TX_RX;
+    huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart1.Init.OverSampling = UART_OVERSAMPLING_8;
+    huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+
+    HAL_UART_Init(&huart1);
+
+    if(uart_handle) *uart_handle = &huart1;
+}
+
+int usart1_start_receive(void){
+    HAL_UART_Receive_DMA(&huart1, uart1_transmit.rx.data, uart1_transmit.rx.length);
+}
+
 /* USER CODE END 0 */
 
+#if(0)
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
@@ -691,6 +827,7 @@ void uart3_busy_callbcak(void){
 
 }
 
+#endif
 
 
 /* USER CODE END 1 */

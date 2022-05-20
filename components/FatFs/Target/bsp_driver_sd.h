@@ -27,11 +27,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 
-//#include "stdint.h"
-#include "stm32l4xx_hal.h"
-
 /* Exported types ------------------------------------------------------------*/
 
+#if(0)
 /**
   * @brief SD Card information structure
   */
@@ -95,10 +93,6 @@
 #endif
 #define SD_DMAx_Rx_IRQn                   DMA2_Channel4_IRQn
 
-//#define BSP_SD_DMA_Tx_IRQHandler          DMA2_Channel5_IRQHandler
-//#define BSP_SD_DMA_Rx_IRQHandler          DMA2_Channel4_IRQHandler
-//#define BSP_SD_IRQHandler                 SDMMC1_IRQHandler
-
 
 /* Exported functions --------------------------------------------------------*/
 uint8_t BSP_SD_Init(void);
@@ -146,6 +140,21 @@ void    sdmmc1_dma_rxcplt_callback(void);
 void    BSP_SD_AbortCallback(void);
 void    BSP_SD_WriteCpltCallback(void);
 void    BSP_SD_ReadCpltCallback(void);
+
+#else
+
+#include "stdint.h"
+#include "sdmmc.h"
+
+
+int sd_initialize(uint8_t lun);
+int sd_status(uint8_t lun);
+int sd_read(uint8_t lun, uint8_t *buff, uint64_t sector, uint32_t count);
+int sd_write(uint8_t lun, const uint8_t *buff, uint64_t sector, uint32_t count);
+int sd_ioctl(uint8_t lun, uint8_t cmd, void *buff);
+
+#endif
+
 /* USER CODE END CallBacksSection_H */
 #ifdef __cplusplus
 }

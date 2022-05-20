@@ -22,8 +22,7 @@
 #include "stdio.h"
 #include "utils.h"
 
-uint8_t retSD;    /* Return value for SD */
-char sd_root_path[4];   /* SD logical drive path */
+char sd_root_path[4] = {'\0'};   /* SD logical drive path */
 
 #define check_FRESULT(ret) {if((ret) != 0) return ret;}
 
@@ -31,33 +30,33 @@ char sd_root_path[4];   /* SD logical drive path */
 #include "stm32l4xx_ll_rtc.h"
 /* USER CODE END Variables */
 
-static __aligned(4) uint8_t workBuffer[FF_MAX_SS] = { 0 };
-
-static uint8_t sd_is_init = 0;
-
-uint8_t FATFS_SD_Init(void)
+FATFS sd_fatfs = {0};
+#if(0)
+__aligned(4) uint8_t workBuffer[FF_MAX_SS] = { 0 };
+#endif
+int FATFS_SD_Init(FATFS* *fs)
 {
+#if(1)
   /*## FatFS: Link the SD driver ###########################*/
-//  retSD = FATFS_LinkDriver(&SD_Driver, sd_root_path);
-	if(sd_is_init) return 0;
     uint8_t ret = 0;
-  /* USER CODE BEGIN Init */
+
+    /* USER CODE BEGIN Init */
   /* additional user code for init */
-	if(BSP_SD_IsDetected() == SD_PRESENT){
-		ret = FATFS_LinkDriver(&SD_Driver, sd_root_path);
+   ret = sd_driver_register(sd_root_path);
+   if(!ret)
+       ret = f_mount(&sd_fatfs, (TCHAR const*)sd_root_path, 1);   // 立即挂载
+#if(0)
+       if(ret & FR_NO_FILESYSTEM){
+        MKFS_PARM mkfs_parm = {.fmt = FM_FAT32, .n_root = 0};
+        ret = f_mkfs(sd_root_path, &mkfs_parm, workBuffer, FF_MAX_SS);
         check_FRESULT(ret);
-//        ret = f_mount(&SDFatFS, (TCHAR const*)sd_root_path, 0);   // 立即挂载
-        if(FR_NO_FILESYSTEM){
-        	MKFS_PARM mkfs_parm = {0};
-        	mkfs_parm.fmt = FM_FAT32;
-        	ret = f_mkfs(sd_root_path, &mkfs_parm, (uint8_t*)workBuffer, sizeof(workBuffer));
-        	check_FRESULT(ret);
-        	sd_is_init = 1;
-        }
-	}else{
-		ret = FR_NOT_READY;
-	}
+        ret = f_unmount(sd_root_path);
+        ret = f_mount(&sd_fatfs, (TCHAR const*)sd_root_path, 1);   // 立即挂载
+   }
+#endif
+   *fs = &sd_fatfs;
 	return ret;
+#endif
   /* USER CODE END Init */
 }
 
@@ -91,7 +90,7 @@ DWORD get_fattime(void)
 }
 
 /* USER CODE BEGIN Application */
-uint8_t FS_FileOperations(void)
+int FS_FileOperations(void)
 {
   FRESULT res = FR_OK; /* FatFs function common result code */
   uint32_t byteswritten = 0; /* File write/read counts */

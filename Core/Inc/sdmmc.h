@@ -24,21 +24,30 @@
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
 
 /* USER CODE BEGIN Includes */
 
+#include "stm32l4xx_it.h"
+#include "stm32l4xx_ll_gpio.h"
+
 /* USER CODE END Includes */
 
-extern SD_HandleTypeDef hsd1;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_SDMMC1_SD_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+
+static inline uint8_t sd_detect(void){
+    return (LL_GPIO_ReadInputPort(GPIOA) & GPIO_PIN_15) ? 1 : 0;
+}
+
+
+int sdmmc_initialize(SD_HandleTypeDef* *hsd_handle);
+
+int sdmmc_deinitialize(SD_HandleTypeDef *hsd_handle);
 
 /* USER CODE END Prototypes */
 

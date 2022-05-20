@@ -18,45 +18,43 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
-//#include "adc.h"
-#include "dma.h"
 
-//#include "i2c.h"
-//#include "lptim.h"
-//#include "rtc.h"
-//#include "sdmmc.h"
-//#include "spi.h"
-//#include "tim.h"
-//#include "usart.h"
-//#include "gpio.h"
+#include "stm32l4xx_it.h"
+#include "stm32l4xx_hal.h"
+
+#include "stm32l4xx_ll_system.h"
+#include "stm32l4xx_ll_gpio.h"
+#include "stm32l4xx_ll_exti.h"
+#include "stm32l4xx_ll_bus.h"
+#include "stm32l4xx_ll_cortex.h"
+#include "stm32l4xx_ll_rcc.h"
+#include "stm32l4xx_ll_utils.h"
+#include "stm32l4xx_ll_pwr.h"
+#include "stm32l4xx_ll_dma.h"
+#include "stm32l4xx_ll_wwdg.h"
+#include "stm32l4xx_ll_iwdg.h"
+
+
+#include <math.h>
+#include "sdmmc.h"
+#include "spi.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cmd.h"
 #include "gps.h"
-//#include "fatfs.h"
-//#include "led_blink.h"
+#include "fatfs.h"
 #include "config_ini.h"
-//#include "rtc_pcf85063a.h"
-//#include "imu_bhi160.h"
-#include "ads127_test.h"
-#include "bsp_ads127.h"
+#include "ads127.h"
 
+#include "main.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-#define MSI_TO_MSI                     0x11U
-#define MSI_TO_HSE                     0x12U
-#define MSI_TO_HSI                     0x13U
-#define HSE_TO_HSE                     0x22U
-#define HSE_TO_MSI                     0x21U
-#define HSE_TO_HSI                     0x23U
-#define HSI_TO_HSI                     0x33U
-#define HSI_TO_HSE                     0x32U
-#define HSI_TO_MSI                     0x31U
 
 
 #define LOG_PATH    "log.txt"
@@ -69,6 +67,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#if(0)
 #define CMD_STATUS_INIT                0x01
 #define CMD_STATUS_CONNECT             0x02
 
@@ -627,10 +626,7 @@ end_section:
 /* Private function prototypes -----------------------------------------------*/
 
 /* USER CODE BEGIN PFP */
-static uint8_t LL_SystemClock_Config(uint32_t in_clock_index, uint32_t in_clk_freq);
-static uint8_t SystemClockHSE_Config(uint32_t in_clk_freq);
-static uint8_t Clock48_Domain_Cofing(void);
-static uint8_t RTCClockLSE_Config(void);
+
 
 static void wwdg_init(uint16_t timeout /* second */){
 #if defined(DEBUG)
@@ -715,7 +711,7 @@ static void gps_time_good_callback(void);
 
 static void tim2_irq_update_handler(void);
 
-
+#endif
 
 #if defined(USE_USB)
 USBD_HandleTypeDef USBD_Device;
@@ -724,13 +720,29 @@ USBD_HandleTypeDef USBD_Device;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 typedef enum{
-    MCO_FRERQ_2M = 2000000UL,
-	MCO_FRERQ_4M = 4000000UL,
-	MCO_FRERQ_8M = 8000000UL,
-	MCO_FRERQ_16M = 16000000UL
+    SYS_CORE_FREQ_32M = 32000000UL,
+    SYS_CORE_FREQ_36M = 36000000UL,
+    SYS_CORE_FREQ_48M = 48000000UL,
+    SYS_CORE_FREQ_64M = 64000000UL,
+    SYS_CORE_FREQ_72M = 72000000UL,
+    SYS_CORE_FREQ_80M = 80000000UL,
+}SYS_Core_Freq_t;
+static uint8_t LL_SystemClock_Config(uint32_t in_clock_index, uint32_t in_clk_freq);
+static void SystemClockHSE_Config(SYS_Core_Freq_t in_clk_freq);
+static void Clock48_Domain_Cofing(void);
+static void RTCClockLSE_Config(void);
+
+typedef enum{
+    MCO_FREQ_1M = 10000000UL,
+    MCO_FREQ_2M = 2000000UL,
+	MCO_FREQ_4M = 4000000UL,
+	MCO_FREQ_8M = 8000000UL,
+	MCO_FREQ_16M = 16000000UL
 }mco_freq_t;
 static void mco_enable(mco_freq_t mco_feq){
+
 	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
 
 	LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_8, LL_GPIO_PULL_DOWN);
@@ -739,7 +751,26 @@ static void mco_enable(mco_freq_t mco_feq){
     LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_8, LL_GPIO_MODE_ALTERNATE);
     LL_GPIO_SetAFPin_0_7(GPIOA, LL_GPIO_PIN_8, LL_GPIO_AF_0);
 
-    LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_2);
+    switch(mco_feq){
+        case MCO_FREQ_1M:
+            LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_16);
+            break;
+        case MCO_FREQ_2M:
+            LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_8);
+            break;
+        case MCO_FREQ_4M:
+            LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_4);
+            break;
+        case MCO_FREQ_8M:
+            LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_2);
+            break;
+        case MCO_FREQ_16M:
+            LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_1);
+            break;
+        default:
+            LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_NOCLOCK, LL_RCC_MCO1_DIV_16);
+            break;
+    }
 }
 
 static void mco_disable(void){
@@ -748,6 +779,12 @@ static void mco_disable(void){
 
     LL_RCC_ConfigMCO(LL_RCC_MCO1SOURCE_HSE, LL_RCC_MCO1_DIV_2);
 }
+
+typedef struct __SPI_HandleTypeDef * SPI_HandleTypeDef_Handle;
+
+SPI_HandleTypeDef_Handle spi1_Handle = NULL;
+
+
 /* USER CODE END 0 */
 
 /**
@@ -756,63 +793,148 @@ static void mco_disable(void){
   */
 
 int main(void){
-  /* USER CODE BEGIN 1 */
+    /* USER CODE BEGIN 1 */
 
 
-  /* USER CODE END 1 */
+    /* USER CODE END 1 */
 
-  if(0){
-	  uint32_t _system_clock_count = 4000000;
-	  while(_system_clock_count--);
-  }
+    if(0){
+      uint32_t _system_clock_count = 4000000;
+      while(_system_clock_count--);
+    }
 
-  /* MCU Configuration--------------------------------------------------------*/
+    /* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    HAL_Init();
 
-  RTCClockLSE_Config();
+    RTCClockLSE_Config();
 
-  SystemClockHSE_Config(64000000);
+    SystemClockHSE_Config(SYS_CORE_FREQ_72M);
 
-  Clock48_Domain_Cofing();
+    Clock48_Domain_Cofing();
 
-  HAL_Init();
+    HAL_Init();
 
-  gpio_all_set_analog();
-  MX_GPIO_Init();
-  LED_ON();
-  /* USER CODE BEGIN Init */
-  mco_enable(MCO_FRERQ_4M);
+    gpio_all_set_analog();
 
-  /* USER CODE END Init */
+    /* USER CODE BEGIN Init */
+    mco_enable(MCO_FREQ_16M);
 
-  /* Configure the system clock */
+    if(0){
+        SD_HandleTypeDef *sd_handle = NULL;
+        int err = 0;
+        err = sdmmc_initialize(&sd_handle);
+        HAL_Delay(100);
+
+    }
+    if(0){
+        FATFS *fs = NULL;
+        int err = 0;
+        err = FATFS_SD_Init(&fs);
+#if(0)
+        err = f_mount(&fatfs, sd_root_path, 0);
+        if(!err){
+            err = f_open(file, "0:/test.txt", FA_WRITE | FA_CREATE_ALWAYS);
+        }
+        f_close(file);
+#endif
+        FS_FileOperations();
+    }
+
+    if(0){
+
+        st_spi1_init(&spi1_Handle);
+        ads127_bsp_reset_pin_initial(GPIOC, GPIO_PIN_4);
+        ads127_bsp_reset();
+        ads127_driver_initialaiz(spi1_Handle, GPIOA, GPIO_PIN_4);
+        if(1){
+            ads127_dev_t device = {
+                    0
+            };
+            ads127_get_id(&device);
+            ads127_get_id(&device);
+            ads127_get_mode(&device);
+            HAL_Delay(100);
+        }
+        if(1){
+            ads127_dev_t device = {
+                    .config.val = 0x00,
+            };
+            uint32_t ret = 0;
+            ads127_configure(&device);
+            device.config.val = 0;
+            ret = ads127_get_configure(&device);
+            HAL_Delay(ret);
+        }
+        if(1){
+            ads127_dev_t device = {
+                    .ofc.val = 0x00112233,
+            };
+            ads127_configure_ofc(&device);
+            device.ofc.val = 0;
+            ads127_get_ofc(&device);
+            HAL_Delay(100);
+        }
+        if(1){
+            ads127_dev_t device = {
+                    .fsc.val = 0x1122,
+            };
+            ads127_configure_fsc(&device);
+            device.fsc.val = 0;
+            ads127_get_fsc(&device);
+            HAL_Delay(100);
+        }
+        HAL_Delay(100);
+        ads127_bsp_start_pin_initial(GPIOC, GPIO_PIN_5);
+
+        ads127_dev_t device = ADS127_DEFAULT_DEVICE();
+        ads127_get_id(&device);
+        ads127_get_mode(&device);
+        ads127_get_configure(&device);
+        ads_data_init_t read_init = {
+                .crate = 0,
+                .osr = 0,
+                .config = 0,
+                .clk = MCO_FREQ_16M,
+        };
+        read_init.config.val = device.config.val;
+        read_init.crate = UINT32_MAX;
+        read_init.osr = ads127_get_osr(&device);
+        ads127_bsp_read_init(&read_init);
+        ads127_bsp_drdy_isr_install(GPIOB, GPIO_PIN_1, ads127_bsp_read_data_from_isr, NULL);
+
+        ads127_bsp_start();
+    }
+
+    /* USER CODE END Init */
+
+    /* Configure the system clock */
 
 
-  while(1){
+    while(1){
 
-  }
+    }
 
-  /* USER CODE END SysInit */
-end_system_reset:
-   NVIC_SystemReset();
-  /* Initialize all configured peripherals */
+    /* USER CODE END SysInit */
+    end_system_reset:
+    NVIC_SystemReset();
+    /* Initialize all configured peripherals */
 
-  /* USER CODE BEGIN 2 */
+    /* USER CODE BEGIN 2 */
 
 
-  /* USER CODE END 2 */
+    /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    while (1)
+    {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+    }
+    /* USER CODE END 3 */
 }
 
 
@@ -822,101 +944,136 @@ end_system_reset:
  *
  */
 
-uint8_t SystemClockHSE_Config(uint32_t in_clk_freq){
-	  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-	  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+void SystemClockHSE_Config(SYS_Core_Freq_t in_clk_freq){
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 
-		LL_FLASH_SetLatency(LL_FLASH_LATENCY_1);
-		while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_1){};
-		LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
+    LL_FLASH_SetLatency(LL_FLASH_LATENCY_1);
+    while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_1){};
+    LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
 
-	  /* -1- Select MSI as system clock source to allow modification of the PLL configuration */
-	  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_SYSCLK;
-	  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
-	  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-	  {
-	    /* Initialization Error */
-	    Error_Handler();
-	  }
-      HAL_Init();
-	  /* -2- Enable HSE  Oscillator, select it as PLL source and finally activate the PLL */
-	  RCC_OscInitStruct.OscillatorType        = RCC_OSCILLATORTYPE_HSE;
-	  RCC_OscInitStruct.HSEState              = RCC_HSE_ON;
-	  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_NONE;
-	  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_OFF;
+    /* -1- Select MSI as system clock source to allow modification of the PLL configuration */
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_SYSCLK;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+    {
+    /* Initialization Error */
+//    Error_Handler();
+    }
+    HAL_Init();
+    /* -2- Enable HSE  Oscillator, select it as PLL source and finally activate the PLL */
+    RCC_OscInitStruct.OscillatorType        = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStruct.HSEState              = RCC_HSE_ON;
+    RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+    RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
 
-	  if((in_clk_freq != HSE_FREQ) && (in_clk_freq == HSE_FREQ * 2)){
-		  RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
-		  RCC_OscInitStruct.PLL.PLLN              = 16; // 16 / M * N
-		  RCC_OscInitStruct.PLL.PLLP              = 7;
-		  RCC_OscInitStruct.PLL.PLLQ              = 4;
-		  RCC_OscInitStruct.PLL.PLLR              = 4;
-		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
-		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
-	  }
+    if(in_clk_freq == SYS_CORE_FREQ_32M){
+      RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
+      RCC_OscInitStruct.PLL.PLLN              = 16; // 16 / M * N
+      RCC_OscInitStruct.PLL.PLLP              = 7;
+      RCC_OscInitStruct.PLL.PLLQ              = 4;
+      RCC_OscInitStruct.PLL.PLLR              = 4;
+    //		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+    //		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
+    }
+    if(in_clk_freq == SYS_CORE_FREQ_36M){
+        RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
+        RCC_OscInitStruct.PLL.PLLN              = 36; // 16 / M * N
+        RCC_OscInitStruct.PLL.PLLP              = 7;
+        RCC_OscInitStruct.PLL.PLLQ              = 6;
+        RCC_OscInitStruct.PLL.PLLR              = 8;
+        //		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+        //		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
+    }
+    if(in_clk_freq == SYS_CORE_FREQ_48M){
+      RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
+      RCC_OscInitStruct.PLL.PLLN              = 36; // 16 / M * N
+      RCC_OscInitStruct.PLL.PLLP              = 7;
+      RCC_OscInitStruct.PLL.PLLQ              = 6;
+      RCC_OscInitStruct.PLL.PLLR              = 6;
+    //		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+    //		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
+    }
+    if(in_clk_freq == SYS_CORE_FREQ_64M){
+        RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
+        RCC_OscInitStruct.PLL.PLLN              = 16; // 16 / M * N
+        RCC_OscInitStruct.PLL.PLLP              = 7;
+        RCC_OscInitStruct.PLL.PLLQ              = 4;
+        RCC_OscInitStruct.PLL.PLLR              = 2;
+        //		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+        //		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
+    }
+    if(in_clk_freq == SYS_CORE_FREQ_72M){
+        RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
+        RCC_OscInitStruct.PLL.PLLN              = 36; // 16 / M * N
+        RCC_OscInitStruct.PLL.PLLP              = 7;
+        RCC_OscInitStruct.PLL.PLLQ              = 6;
+        RCC_OscInitStruct.PLL.PLLR              = 4;
+        //		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+        //		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
+    }
+    if(in_clk_freq == SYS_CORE_FREQ_80M){
+        RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
+        RCC_OscInitStruct.PLL.PLLN              = 20; // 16 / M * N
+        RCC_OscInitStruct.PLL.PLLP              = 7;
+        RCC_OscInitStruct.PLL.PLLQ              = 4;
+        RCC_OscInitStruct.PLL.PLLR              = 2;
+        //		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
+        //		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
+    }
+    if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK){
+    /* Initialization Error */
+//        Error_Handler();
+    }
 
-	  if((in_clk_freq != HSE_FREQ) && (in_clk_freq == HSE_FREQ * 4)){
-		  RCC_OscInitStruct.PLL.PLLM              = 2;  // 16M / M
-		  RCC_OscInitStruct.PLL.PLLN              = 16; // 16 / M * N
-		  RCC_OscInitStruct.PLL.PLLP              = 7;
-		  RCC_OscInitStruct.PLL.PLLQ              = 2;
-		  RCC_OscInitStruct.PLL.PLLR              = 2;
-		  RCC_OscInitStruct.PLL.PLLSource         = RCC_PLLSOURCE_HSE;
-		  RCC_OscInitStruct.PLL.PLLState          = RCC_PLL_ON;
-	  }
+    /* -3- Select the PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 clocks dividers */
+    RCC_ClkInitStruct.ClockType       = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+//    if(READ_BIT(RCC->CR, RCC_CR_PLLRDY)) RCC_ClkInitStruct.SYSCLKSource    = RCC_SYSCLKSOURCE_PLLCLK;
+//    else{
+//      RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+//    }
+    RCC_ClkInitStruct.SYSCLKSource    = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider   = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider  = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider  = RCC_HCLK_DIV1;
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+    {
+    /* Initialization Error */
+//    Error_Handler();
+    }
 
-	  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-	  {
-	    /* Initialization Error */
-	    Error_Handler();
-	  }
+    /* -4- Optional: Disable MSI Oscillator (if the MSI is no more needed by the application)*/
+    RCC_OscInitStruct.OscillatorType  = RCC_OSCILLATORTYPE_MSI;
+    RCC_OscInitStruct.MSIState        = RCC_MSI_OFF;
+    RCC_OscInitStruct.PLL.PLLState    = RCC_PLL_NONE;  /* No update on PLL */
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+    /* Initialization Error */
+//    Error_Handler();
+    }
 
-	  /* -3- Select the PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 clocks dividers */
-	  RCC_ClkInitStruct.ClockType       = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
-	  if(READ_BIT(RCC->CR, RCC_CR_PLLRDY)) RCC_ClkInitStruct.SYSCLKSource    = RCC_SYSCLKSOURCE_PLLCLK;
-	  else{
-		  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
-	  }
-	  RCC_ClkInitStruct.AHBCLKDivider   = RCC_SYSCLK_DIV1;
-	  RCC_ClkInitStruct.APB1CLKDivider  = RCC_HCLK_DIV1;
-	  RCC_ClkInitStruct.APB2CLKDivider  = RCC_HCLK_DIV1;
-	  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
-	  {
-	    /* Initialization Error */
-	    Error_Handler();
-	  }
-
-	  /* -4- Optional: Disable MSI Oscillator (if the MSI is no more needed by the application)*/
-	  RCC_OscInitStruct.OscillatorType  = RCC_OSCILLATORTYPE_MSI;
-	  RCC_OscInitStruct.MSIState        = RCC_MSI_OFF;
-	  RCC_OscInitStruct.PLL.PLLState    = RCC_PLL_NONE;  /* No update on PLL */
-	  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-	  {
-	    /* Initialization Error */
-	    Error_Handler();
-	  }
-
-	  HAL_Init();
-	  return 0;
+    HAL_Init();
 }
 
-uint8_t Clock48_Domain_Cofing(void){
-
+void Clock48_Domain_Cofing(void){
+#if(0)
 	RCC_PLLSAI1InitTypeDef PllSAI1ClkInit = {0};
 	PllSAI1ClkInit.PLLSAI1ClockOut = RCC_PLLSAI1_48M2CLK;
 	PllSAI1ClkInit.PLLSAI1M = 2;
 	PllSAI1ClkInit.PLLSAI1N = 12;
 	PllSAI1ClkInit.PLLSAI1P = RCC_PLLP_DIV7;
 	PllSAI1ClkInit.PLLSAI1Q = RCC_PLLQ_DIV2;
-	PllSAI1ClkInit.PLLSAI1R = RCC_PLLR_DIV8;
+	PllSAI1ClkInit.PLLSAI1R = RCC_PLLR_DIV2;
 	PllSAI1ClkInit.PLLSAI1Source = RCC_PLLSOURCE_HSE;
+
 	if(HAL_RCCEx_EnablePLLSAI1(&PllSAI1ClkInit) != HAL_OK){
 		Error_Handler();
 	}
-    return 0;
+#endif
 }
 
-uint8_t RTCClockLSE_Config(void){
+void RTCClockLSE_Config(void){
+#if(1)
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 	LL_PWR_EnableBkUpAccess();
 	uint32_t _timeout = 0;
@@ -938,8 +1095,18 @@ uint8_t RTCClockLSE_Config(void){
 			LL_RCC_LSI_Disable();
 		}
     }
-    return 0;
+#else
+    RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
+    if(HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK){
+        Error_Handler();
+    }
+
+#endif
 }
+
+#if(0)
 
 #if defined(NOT_USE) && (NOT_USE)
 static void read_config_from_sd(const char* _root_path, char* _config_section, void* _config, uint8_t opt){  // 废弃函数
@@ -1675,7 +1842,7 @@ void enter_power_mode(uint32_t power_mode){
 //}
 
 static void reset_sd(void){
-    BSP_SD_DeInit();
+//    BSP_SD_DeInit();
 }
 
 static uint32_t save_ads_file_times = 0;
@@ -1686,6 +1853,7 @@ static void pericdic_close_ads_file(void){
 //    	 reset_sd();
 //     }
 }
+#endif
 
 /* USER CODE END 4 */
 

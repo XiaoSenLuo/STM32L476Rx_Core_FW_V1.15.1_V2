@@ -23,8 +23,9 @@
  extern "C" {
 #endif
 
-#include "sd_diskio.h" /* defines SD_Driver as external */
-
+#include "ff.h" /* defines SD_Driver as external */
+#include "sd_diskio.h"
+#include "ff_gen_drv.h"
 /* USER CODE BEGIN Includes */
 
 
@@ -38,10 +39,10 @@ extern char sd_root_path[4]; /* SD logical drive path */
 //extern FATFS SDFatFS; /* File system object for SD logical drive */
 //extern FIL SDFile; /* File object for SD */
 
-uint8_t FATFS_SD_Init(void);
+int FATFS_SD_Init(FATFS* *fs);
 
 /* USER CODE BEGIN Prototypes */
-uint8_t FS_FileOperations(void);
+int FS_FileOperations(void);
 
 
 /**

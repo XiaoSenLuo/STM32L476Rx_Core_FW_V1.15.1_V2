@@ -20,7 +20,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "gpio.h"
 /* USER CODE BEGIN 0 */
-#include "main.h"
 /* USER CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
@@ -28,6 +27,7 @@
 /*----------------------------------------------------------------------------*/
 /* USER CODE BEGIN 1 */
 
+#if(0)
 void gpio_pa4_change_mode(uint32_t in_mode){
 	if(in_mode == LL_GPIO_MODE_OUTPUT){
 		LL_GPIO_DisablePinAnalogControl(LED_GPIO_Port, LED_Pin);
@@ -157,42 +157,21 @@ static void exit_gpio_init(void){
 	HAL_NVIC_EnableIRQ(EXTI_IMU1_EXTI_IRQn);
 }
 
-void ll_exti_it_gpio_init(GPIO_TypeDef * in_gpio_port, uint32_t in_exti_pin, uint32_t in_trigger){
-	uint32_t _exti_port = 0, _exti_line = 0;
-
-	LL_GPIO_SetPinMode(in_gpio_port, in_exti_pin, LL_GPIO_MODE_INPUT);
-	LL_GPIO_SetPinPull(in_gpio_port, in_exti_pin, LL_GPIO_PULL_NO);
-
-	if(LL_APB2_GRP1_IsEnabledClock(LL_APB2_GRP1_PERIPH_SYSCFG) == 0) LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
-
-	_exti_port = ((((uint32_t)in_gpio_port - (uint32_t)AHB2PERIPH_BASE) >> 8) >> 2);
-	_exti_line = (uint32_t)((0x000FU << ((in_exti_pin % 4) << 2)) << 16U | (in_exti_pin >> 2));
-
-	LL_SYSCFG_SetEXTISource(_exti_port, _exti_line);
-
-	if(_exti_line < 31){       // GPIO PIN < 16
-		LL_EXTI_EnableIT_0_31(_exti_line);
-        LL_EXTI_DisableEvent_0_31(_exti_line);
-		switch(in_trigger){
-		case LL_EXTI_TRIGGER_RISING:
-			LL_EXTI_EnableRisingTrig_0_31(_exti_line);
-			LL_EXTI_DisableFallingTrig_0_31(_exti_line);
-			break;
-		case LL_EXTI_TRIGGER_FALLING:
-			LL_EXTI_DisableRisingTrig_0_31(_exti_line);
-			LL_EXTI_EnableFallingTrig_0_31(_exti_line);
-			break;
-		case LL_EXTI_TRIGGER_RISING_FALLING:
-			LL_EXTI_EnableFallingTrig_0_31(_exti_line);
-			LL_EXTI_EnableRisingTrig_0_31(_exti_line);
-			break;
-		default:
-			LL_EXTI_DisableFallingTrig_0_31(_exti_line);
-			LL_EXTI_DisableRisingTrig_0_31(_exti_line);
-			break;
-		}
-	}
-}
+//void ll_exti_gpio_init(GPIO_TypeDef *in_gpio_port, ll_gpio_pin_t in_exti_pin, const LL_EXTI_InitTypeDef *exti){
+//	uint32_t _exti_port = 0, _exti_line = 0;
+//
+//	LL_GPIO_SetPinMode(in_gpio_port, in_exti_pin, LL_GPIO_MODE_INPUT);
+//	LL_GPIO_SetPinPull(in_gpio_port, in_exti_pin, LL_GPIO_PULL_NO);
+//
+//    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+//    LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTB, LL_SYSCFG_EXTI_LINE1);
+//
+//    LL_EXTI_Init(exti);
+//
+//    NVIC_EnableIRQ(EXTI1_IRQn);
+//    NVIC_SetPriority(EXTI1_IRQn, 15);
+//
+//}
 
 void ll_exti_it_gpio_deinit(GPIO_TypeDef * in_gpio_port, uint32_t in_exti_pin){
 	uint32_t _exti_port = 0, _exti_line = 0;
@@ -254,6 +233,11 @@ void MX_GPIO_Init(void)
 //  optimize_gpio_power(GPIOB, LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_8 | LL_GPIO_PIN_9 |LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_15);
 //  optimize_gpio_power(GPIOC, LL_GPIO_PIN_1 | LL_GPIO_PIN_7);
 }
+#endif
+
+#include "stm32l4xx_ll_gpio.h"
+#include "stm32l4xx_ll_bus.h"
+
 
 /* USER CODE BEGIN 2 */
 void gpio_all_set_analog(void){

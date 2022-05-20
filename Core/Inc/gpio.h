@@ -26,8 +26,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "stm32l4xx_ll_gpio.h"
-
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -40,15 +38,16 @@
 
 /* USER CODE END Private defines */
 
+#if(0)
 void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
-void ll_exti_it_gpio_init(GPIO_TypeDef * in_gpio_port, uint32_t in_exti_pin, uint32_t in_trigger);
-
 void gpio_pa4_change_mode(uint32_t in_mode);
 
 void optimize_gpio_power(GPIO_TypeDef *in_gpio, uint32_t in_pin);
+
+#endif
 
 void gpio_all_set_analog(void);
 

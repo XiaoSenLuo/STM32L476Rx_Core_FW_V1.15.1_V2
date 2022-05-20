@@ -23,6 +23,11 @@
  */
 /* USER CODE END Header */
 
+
+
+#if(0)
+
+
 #ifdef OLD_API
 /* kept to avoid issue when migrating old projects. */
 /* USER CODE BEGIN 0 */
@@ -35,7 +40,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "bsp_driver_sd.h"
-#include "main.h"
+
 
 #define SDMMC_WAIT_TIMEOUT        30000  // 30s
 
@@ -332,7 +337,7 @@ uint8_t BSP_SD_Init(void)
 		return MSD_ERROR_SD_NOT_PRESENT;
 	}
 	/* Msp SD initialization */
-    st_irq_handler_register(SDMMC1_IRQn, sdmmc1_irq_callback);
+
 
 	/* HAL SD initialization */
 	hal_ret = HAL_SD_Init(&hsd1);
@@ -513,7 +518,7 @@ __weak uint8_t BSP_SD_ReadBlocks_DMA(uint32_t *pData, uint32_t ReadAddr, uint32_
 //  }
 
 //	  __HAL_DMA_DISABLE(hsd1.hdmarx);
-    st_irq_handler_register(DMA2_Channel4_IRQn, sdmmc1_dma_rxcplt_callback);
+
 	LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);   // 关闭 dma 通道, 修改参数
 	LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_4, LL_DMA_REQUEST_7);
 	LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);  // 修改传输方向(修改寄存器)
@@ -548,14 +553,8 @@ __weak uint8_t BSP_SD_WriteBlocks_DMA(uint32_t *pData, uint32_t WriteAddr, uint3
   uint8_t sd_state = MSD_OK;
 
 #if(SDMMC_SHARE_DMA)
-//  hsd1.hdmarx = NULL;
-//  if(hsd1.hdmatx == NULL){
-//	  sd_state = SD_DMAConfigTx(&hsd1);
-//	  if(sd_state == HAL_OK) sd_state = MSD_OK;
-//	  else sd_state = MSD_ERROR;
-//  }
-//    __HAL_DMA_DISABLE(hsd1.hdmarx);
-    st_irq_handler_register(DMA2_Channel4_IRQn, sdmmc1_dma_txcplt_callback);
+
+
 	  LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
 	  LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_4, LL_DMA_REQUEST_7);
 	  LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
@@ -743,6 +742,46 @@ __weak void BSP_SD_ReadCpltCallback(void)
 uint8_t BSP_SD_IsDetected(void){
   return !(SD_DETECT_GPIO_PORT->ODR & SD_DETECT_PIN);
 }
+
+#else
+
+#include "bsp_driver_sd.h"
+#include "sdmmc.h"
+
+SD_HandleTypeDef *hsd_handle = NULL;
+
+int sd_initialize(uint8_t lun){
+
+}
+
+
+int sd_status(uint8_t lun){
+
+}
+
+
+int sd_read(uint8_t lun, uint8_t *buff, uint64_t sector, uint32_t count){
+
+}
+
+
+int sd_write(uint8_t lun, const uint8_t *buff, uint64_t sector, uint32_t count){
+
+}
+
+
+int sd_ioctl(uint8_t lun, uint8_t cmd, void *buff){
+
+}
+
+
+
+#endif
+
+
+
+
+
 /* USER CODE END AdditionalCode */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -27,9 +27,19 @@
 
 
 /* USER CODE BEGIN Includes */
-#include "stm32l4xx_ll_spi.h"
+#include "stm32l4xx_it.h"
 /* USER CODE END Includes */
 
+#if(1)
+
+typedef SPI_HandleTypeDef * SPI_HandleTypeDef_Handle;
+
+void st_spi1_init(SPI_HandleTypeDef* *SpiHandle);
+
+
+#endif
+
+#if(0)
 extern SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN Private defines */
@@ -83,6 +93,7 @@ uint32_t get_spi1_dma_status(void);
 void hal_spi1_rxcplt_callback(void);
 void hal_spi1_txcplt_callback(void);
 
+#endif
 #endif
 
 /* USER CODE END Prototypes */
