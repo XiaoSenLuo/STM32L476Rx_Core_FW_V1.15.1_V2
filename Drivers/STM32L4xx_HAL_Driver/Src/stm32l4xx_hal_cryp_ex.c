@@ -431,7 +431,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_DMA(CRYP_HandleTypeDef *hcryp,  uint8_t *pInput
   */
 HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInputData, uint64_t Size, uint8_t *pOutputData, uint32_t Timeout)
 {
-  uint32_t index             ;
+  uint32_t counter             ;
   uint32_t inputaddr         ;
   uint32_t outputaddr        ;
   uint32_t tagaddr           ;
@@ -553,7 +553,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
         uint64_t index_test;
         inputaddr = (uint32_t)pInputData;
 
-        for(index=0U ; (index < Size); index += 16U)
+        for(counter=0U ; (counter < Size); counter += 16U)
         {
           /* Write the Input block in the Data Input register */
           hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -576,7 +576,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
 
           /* If the suspension flag has been raised and if the processing is not about
            to end, suspend processing */
-          index_test = (uint64_t)index + 16U;
+          index_test = (uint64_t)counter + 16U;
           if ((hcryp->SuspendRequest == HAL_CRYP_SUSPEND) && (index_test < Size))
           {
             /* reset SuspendRequest */
@@ -597,7 +597,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
 
             return HAL_OK;
           }
-        } /* for(index=0; (index < Size); index += 16) */
+        } /* for(counter=0; (counter < Size); counter += 16) */
       }
 #endif /* !defined(AES_CR_NPBLB) */
 
@@ -610,7 +610,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
       {
         difflength = (uint32_t) (hcryp->Init.HeaderSize - headerlength);
       }
-      for(index=0U ; index < headerlength; index += 16U)
+      for(counter=0U ; counter < headerlength; counter += 16U)
       {
         uint64_t index_temp;
         /* Write the Input block in the Data Input register */
@@ -634,7 +634,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
 
         /* If the suspension flag has been raised and if the processing is not about
          to end, suspend processing */
-        index_temp = (uint64_t)index + 16U;
+        index_temp = (uint64_t)counter + 16U;
         if ((hcryp->SuspendRequest == HAL_CRYP_SUSPEND) && (index_temp < headerlength))
         {
           /* reset SuspendRequest */
@@ -697,7 +697,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
       }
 
       /* Feed payload */
-      for(index=0U ; index < payloadlength; index += 16U)
+      for(counter=0U ; counter < payloadlength; counter += 16U)
       {
         uint64_t index_temp;
         /* Write the Input block in the Data Input register */
@@ -733,7 +733,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth(CRYP_HandleTypeDef *hcryp, uint8_t *pInput
 
         /* If the suspension flag has been raised and if the processing is not about
          to end, suspend processing */
-        index_temp = (uint64_t)index + 16U;
+        index_temp = (uint64_t)counter + 16U;
         if ((hcryp->SuspendRequest == HAL_CRYP_SUSPEND) && (index_temp < payloadlength))
         {
           /* no flag waiting under IRQ handling */
@@ -946,7 +946,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pIn
   uint32_t inputaddr         ;
   uint64_t headerlength      ;
   uint64_t inputlength       ;
-  uint32_t index             ;
+  uint32_t counter             ;
   uint32_t addhoc_process = 0;
   uint32_t difflength     = 0;
   uint32_t difflengthmod4 = 0;
@@ -1146,7 +1146,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pIn
       {
         /* Header has size less than 128 bits */
         /* Enter complete words when possible */
-        for(index=0U ; index < (difflength/4U); index ++)
+        for(counter=0U ; counter < (difflength/4U); counter ++)
         {
           /* Write the Input block in the Data Input register */
           hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -1159,7 +1159,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pIn
           hcryp->Instance->DINR = ((*(uint32_t*)(inputaddr)) & mask[mask_index][difflengthmod4-1U]);
         }
         /* Pad with zero-words to reach 128-bit long block and wrap-up header feeding to the IP */
-        for(index=0U; index < (4U - ((difflength+3U)/4U)); index ++)
+        for(counter=0U; counter < (4U - ((difflength+3U)/4U)); counter ++)
         {
           hcryp->Instance->DINR = 0;
         }
@@ -1236,7 +1236,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pIn
         difflengthmod4 = difflength%4U;
         /*  Insert the last block (which size is inferior to 128 bits) padded with zeroes
             to have a complete block of 128 bits */
-        for(index=0U; index < (difflength/4U); index ++)
+        for(counter=0U; counter < (difflength/4U); counter ++)
         {
           /* Write the Input block in the Data Input register */
           hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -1248,7 +1248,7 @@ HAL_StatusTypeDef HAL_CRYPEx_AES_Auth_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pIn
           hcryp->Instance->DINR = ((*(uint32_t*)(inputaddr)) & mask[mask_index][difflengthmod4-1U]);
         }
         /* Wrap-up in padding with zero-words if applicable */
-        for(index=0U; index < (4U - ((difflength+3U)/4U)); index ++)
+        for(counter=0U; counter < (4U - ((difflength+3U)/4U)); counter ++)
         {
           hcryp->Instance->DINR = 0;
         }
@@ -2237,7 +2237,7 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
 {
   uint32_t inputaddr         ;
   uint32_t outputaddr        ;
-  uint32_t index             ;
+  uint32_t counter             ;
   uint32_t addhoc_process = 0;
   uint32_t difflength     = 0;
   uint32_t difflengthmod4 = 0;
@@ -2377,7 +2377,7 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
         {
           /* Header remainder has size less than 128 bits */
           /* Enter complete words when possible */
-          for(index=0U ; index < (difflength/4U); index ++)
+          for(counter=0U ; counter < (difflength/4U); counter ++)
           {
             /* Write the Input block in the Data Input register */
             hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -2390,7 +2390,7 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
             hcryp->Instance->DINR = ((*(uint32_t*)(inputaddr)) & mask[mask_index][difflengthmod4-1U]);
           }
           /* Pad with zero-words to reach 128-bit long block and wrap-up header feeding to the IP */
-          for(index=0U; index < (4U - ((difflength+3U)/4U)); index ++)
+          for(counter=0U; counter < (4U - ((difflength+3U)/4U)); counter ++)
           {
             hcryp->Instance->DINR = 0;
           }
@@ -2423,15 +2423,15 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
         difflengthmod4 = difflength%4U;
         hcryp->CrypOutCount = 0;   /* mark that no more output data will be needed */
         /* Retrieve intermediate data */
-        for(index=0U ; index < 4U; index ++)
+        for(counter=0U ; counter < 4U; counter ++)
         {
-          intermediate_data[index] = hcryp->Instance->DOUTR;
+          intermediate_data[counter] = hcryp->Instance->DOUTR;
         }
         /* Retrieve last words of cyphered data */
         /* First, retrieve complete output words */
-        for(index=0U ; index < (difflength/4U); index ++)
+        for(counter=0U ; counter < (difflength/4U); counter ++)
         {
-          *(uint32_t*)(outputaddr) = intermediate_data[index];
+          *(uint32_t*)(outputaddr) = intermediate_data[counter];
           outputaddr+=4U;
         }
         /* Next, retrieve partial output word if applicable;
@@ -2455,17 +2455,17 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
 
           /* Before inserting the intermediate data, carry on masking operation
              with a mask of zeros of same size than the padding applied to the last block of payload */
-          for(index=0U ; index < (4U - ((difflength+3U)/4U)); index ++)
+          for(counter=0U ; counter < (4U - ((difflength+3U)/4U)); counter ++)
           {
-            intermediate_data[((difflength+3U)/4U)+index] = 0;
+            intermediate_data[((difflength+3U)/4U)+counter] = 0;
           }
 
           /* Insert intermediate data to trigger an additional DOUTR reading round */
           /* Clear Computation Complete Flag before entering new block */
           __HAL_CRYP_CLEAR_FLAG(hcryp, CRYP_CCF_CLEAR);
-          for(index=0U ; index < 4U; index ++)
+          for(counter=0U ; counter < 4U; counter ++)
           {
-            hcryp->Instance->DINR = intermediate_data[index];
+            hcryp->Instance->DINR = intermediate_data[counter];
           }
         }
         else
@@ -2516,9 +2516,9 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
         else
         {
           /* Software work-around: additional DOUTR reading round to discard the data */
-          for(index=0U ; index < 4U; index ++)
+          for(counter=0U ; counter < 4U; counter ++)
           {
-            intermediate_data[index] = hcryp->Instance->DOUTR;
+            intermediate_data[counter] = hcryp->Instance->DOUTR;
           }
         }
 #endif
@@ -2608,7 +2608,7 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
 
           /*  Insert the last block (which size is inferior to 128 bits) padded with zeroes
               to have a complete block of 128 bits */
-          for(index=0U ; index < (difflength/4U); index ++)
+          for(counter=0U ; counter < (difflength/4U); counter ++)
           {
             /* Write the Input block in the Data Input register */
             hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -2620,7 +2620,7 @@ HAL_StatusTypeDef CRYP_AES_Auth_IT(CRYP_HandleTypeDef *hcryp)
             hcryp->Instance->DINR = ((*(uint32_t*)(inputaddr)) & mask[mask_index][difflengthmod4-1U]);
           }
           /* Wrap-up in padding with zero-words if applicable */
-          for(index=0U ; index < (4U - ((difflength+3U)/4U)); index ++)
+          for(counter=0U ; counter < (4U - ((difflength+3U)/4U)); counter ++)
           {
             hcryp->Instance->DINR = 0;
           }
@@ -2779,12 +2779,12 @@ static void CRYP_Authentication_SetDMAConfig(CRYP_HandleTypeDef *hcryp, uint32_t
   */
 static HAL_StatusTypeDef CRYP_ProcessData(CRYP_HandleTypeDef *hcryp, uint8_t* Input, uint16_t Ilength, uint8_t* Output, uint32_t Timeout)
 {
-  uint32_t index;
+  uint32_t counter;
   uint32_t inputaddr  = (uint32_t)Input;
   uint32_t outputaddr = (uint32_t)Output;
 
 
-  for(index=0U ; (index < Ilength); index += 16U)
+  for(counter=0U ; (counter < Ilength); counter += 16U)
   {
     /* Write the Input block in the Data Input register */
     hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -2819,7 +2819,7 @@ static HAL_StatusTypeDef CRYP_ProcessData(CRYP_HandleTypeDef *hcryp, uint8_t* In
 
     /* If the suspension flag has been raised and if the processing is not about
        to end, suspend processing */
-    if ((hcryp->SuspendRequest == HAL_CRYP_SUSPEND) && ((index+16U) < Ilength))
+    if ((hcryp->SuspendRequest == HAL_CRYP_SUSPEND) && ((counter+16U) < Ilength))
     {
       /* Reset SuspendRequest */
       hcryp->SuspendRequest = HAL_CRYP_SUSPEND_NONE;
@@ -2828,7 +2828,7 @@ static HAL_StatusTypeDef CRYP_ProcessData(CRYP_HandleTypeDef *hcryp, uint8_t* In
       hcryp->pCrypOutBuffPtr =  (uint8_t *)outputaddr;
       hcryp->pCrypInBuffPtr  =  (uint8_t *)inputaddr;
       /* Save the number of bytes that remain to be processed at this point */
-      hcryp->CrypInCount     =  Ilength - (index+16U);
+      hcryp->CrypInCount     =  Ilength - (counter+16U);
 
       /* Change the CRYP state */
       hcryp->State = HAL_CRYP_STATE_SUSPENDED;
@@ -3082,7 +3082,7 @@ static void CRYP_DMAError(DMA_HandleTypeDef *hdma)
   */
 static void CRYP_Padding(CRYP_HandleTypeDef *hcryp, uint32_t difflength, uint32_t polling)
 {
-  uint32_t index;
+  uint32_t counter;
   uint32_t difflengthmod4 = difflength%4U;
   uint32_t inputaddr      = (uint32_t)hcryp->pCrypInBuffPtr;
   uint32_t outputaddr     = (uint32_t)hcryp->pCrypOutBuffPtr;
@@ -3123,7 +3123,7 @@ static void CRYP_Padding(CRYP_HandleTypeDef *hcryp, uint32_t difflength, uint32_
 
   /* Wrap-up entering header or payload data */
   /* Enter complete words when possible */
-  for(index=0U ; index < (difflength/4U); index ++)
+  for(counter=0U ; counter < (difflength/4U); counter ++)
   {
     /* Write the Input block in the Data Input register */
     hcryp->Instance->DINR = *(uint32_t*)(inputaddr);
@@ -3136,7 +3136,7 @@ static void CRYP_Padding(CRYP_HandleTypeDef *hcryp, uint32_t difflength, uint32_
     hcryp->Instance->DINR = ((*(uint32_t*)(inputaddr)) & mask[mask_index][difflengthmod4-1U]);
   }
   /* Pad with zero-words to reach 128-bit long block and wrap-up header feeding to the IP */
-  for(index=0U ; index < (4U - ((difflength+3U)/4U)); index ++)
+  for(counter=0U ; counter < (4U - ((difflength+3U)/4U)); counter ++)
   {
     hcryp->Instance->DINR = 0;
   }
@@ -3163,15 +3163,15 @@ static void CRYP_Padding(CRYP_HandleTypeDef *hcryp, uint32_t difflength, uint32_
   {
 
     /* Retrieve intermediate data */
-    for(index=0U ; index < 4U; index ++)
+    for(counter=0U ; counter < 4U; counter ++)
     {
-      intermediate_data[index] = hcryp->Instance->DOUTR;
+      intermediate_data[counter] = hcryp->Instance->DOUTR;
     }
     /* Retrieve last words of cyphered data */
     /* First, retrieve complete output words */
-    for(index=0U ; index < (difflength/4U); index ++)
+    for(counter=0U ; counter < (difflength/4U); counter ++)
     {
-      *(uint32_t*)(outputaddr) = intermediate_data[index];
+      *(uint32_t*)(outputaddr) = intermediate_data[counter];
       outputaddr+=4U;
     }
     /* Next, retrieve partial output word if applicable;
@@ -3198,14 +3198,14 @@ static void CRYP_Padding(CRYP_HandleTypeDef *hcryp, uint32_t difflength, uint32_
 
       /* Before inserting the intermediate data, carry on masking operation
          with a mask of zeros of same size than the padding applied to the last block of payload */
-      for(index=0U ; index < (4U - ((difflength+3U)/4U)); index ++)
+      for(counter=0U ; counter < (4U - ((difflength+3U)/4U)); counter ++)
       {
-        intermediate_data[((difflength+3U)/4U)+index] = 0;
+        intermediate_data[((difflength+3U)/4U)+counter] = 0;
       }
       /* Insert intermediate data */
-      for(index=0U ; index < 4U; index ++)
+      for(counter=0U ; counter < 4U; counter ++)
       {
-        hcryp->Instance->DINR = intermediate_data[index];
+        hcryp->Instance->DINR = intermediate_data[counter];
       }
 
       /*  Wait for completion, and read data on DOUT. This data is to discard. */
@@ -3219,9 +3219,9 @@ static void CRYP_Padding(CRYP_HandleTypeDef *hcryp, uint32_t difflength, uint32_
       /* Read data to discard */
       /* Clear CCF Flag */
       __HAL_CRYP_CLEAR_FLAG(hcryp, CRYP_CCF_CLEAR);
-      for(index=0U ; index < 4U; index ++)
+      for(counter=0U ; counter < 4U; counter ++)
       {
-        intermediate_data[index] = hcryp->Instance->DOUTR;
+        intermediate_data[counter] = hcryp->Instance->DOUTR;
       }
 
     } /* if (hcryp->Init.OperatingMode == CRYP_ALGOMODE_ENCRYPT) */

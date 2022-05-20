@@ -38,7 +38,7 @@ extern "C" {
   * @{
   */
 /** MISRA C:2012 deviation rule has been granted for following rules:
-  * Rule-18.1_d - Medium: Array pointer `GPIOx' is accessed with index [..,..]
+  * Rule-18.1_d - Medium: Array pointer `GPIOx' is accessed with counter [..,..]
   * which may be out of array bounds [..,UNKNOWN] in following APIs:
   * LL_GPIO_GetAFPin_0_7
   * LL_GPIO_SetAFPin_0_7

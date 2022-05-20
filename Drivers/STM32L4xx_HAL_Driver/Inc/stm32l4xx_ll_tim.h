@@ -173,7 +173,7 @@ static const uint8_t SHIFT_TAB_OISx[] =
 /** @defgroup TIM_LL_Private_Macros TIM Private Macros
   * @{
   */
-/** @brief  Convert channel id into channel index.
+/** @brief  Convert channel id into channel counter.
   * @param  __CHANNEL__ This parameter can be one of the following values:
   *         @arg @ref LL_TIM_CHANNEL_CH1
   *         @arg @ref LL_TIM_CHANNEL_CH1N

@@ -88,7 +88,7 @@ typedef struct
                                      contains an argument, it must be loaded into this register
                                      before writing the command to the command register.              */
 
-  uint32_t CmdIndex;            /*!< Specifies the SDMMC command index. It must be Min_Data = 0 and
+  uint32_t CmdIndex;            /*!< Specifies the SDMMC command counter. It must be Min_Data = 0 and
                                      Max_Data = 64                                                    */
 
   uint32_t Response;            /*!< Specifies the SDMMC response type.

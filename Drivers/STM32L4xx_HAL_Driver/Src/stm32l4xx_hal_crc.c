@@ -286,7 +286,7 @@ __weak void HAL_CRC_MspDeInit(CRC_HandleTypeDef *hcrc)
   */
 uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t BufferLength)
 {
-  uint32_t index;      /* CRC input data buffer index */
+  uint32_t counter;      /* CRC input data buffer counter */
   uint32_t temp = 0U;  /* CRC output (read from hcrc->Instance->DR register) */
 
   /* Change CRC peripheral state */
@@ -296,9 +296,9 @@ uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_
   {
     case CRC_INPUTDATA_FORMAT_WORDS:
       /* Enter Data to the CRC calculator */
-      for (index = 0U; index < BufferLength; index++)
+      for (counter = 0U; counter < BufferLength; counter++)
       {
-        hcrc->Instance->DR = pBuffer[index];
+        hcrc->Instance->DR = pBuffer[counter];
       }
       temp = hcrc->Instance->DR;
       break;
@@ -338,7 +338,7 @@ uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_
   */
 uint32_t HAL_CRC_Calculate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t BufferLength)
 {
-  uint32_t index;      /* CRC input data buffer index */
+  uint32_t counter;      /* CRC input data buffer counter */
   uint32_t temp = 0U;  /* CRC output (read from hcrc->Instance->DR register) */
 
   /* Change CRC peripheral state */
@@ -352,9 +352,9 @@ uint32_t HAL_CRC_Calculate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t
   {
     case CRC_INPUTDATA_FORMAT_WORDS:
       /* Enter 32-bit input data to the CRC calculator */
-      for (index = 0U; index < BufferLength; index++)
+      for (counter = 0U; counter < BufferLength; counter++)
       {
-        hcrc->Instance->DR = pBuffer[index];
+        hcrc->Instance->DR = pBuffer[counter];
       }
       temp = hcrc->Instance->DR;
       break;
@@ -431,7 +431,7 @@ HAL_CRC_StateTypeDef HAL_CRC_GetState(CRC_HandleTypeDef *hcrc)
   */
 static uint32_t CRC_Handle_8(CRC_HandleTypeDef *hcrc, uint8_t pBuffer[], uint32_t BufferLength)
 {
-  uint32_t i; /* input data buffer index */
+  uint32_t i; /* input data buffer counter */
   uint16_t data;
   __IO uint16_t *pReg;
 
@@ -482,7 +482,7 @@ static uint32_t CRC_Handle_8(CRC_HandleTypeDef *hcrc, uint8_t pBuffer[], uint32_
   */
 static uint32_t CRC_Handle_16(CRC_HandleTypeDef *hcrc, uint16_t pBuffer[], uint32_t BufferLength)
 {
-  uint32_t i;  /* input data buffer index */
+  uint32_t i;  /* input data buffer counter */
   __IO uint16_t *pReg;
 
   /* Processing time optimization: 2 HalfWords are entered in a row with a single word write,

@@ -414,9 +414,9 @@ HAL_StatusTypeDef SDMMC_SendCommand(SDMMC_TypeDef *SDMMCx, SDMMC_CmdInitTypeDef 
 }
 
 /**
-  * @brief  Return the command index of last command for which response received
+  * @brief  Return the command counter of last command for which response received
   * @param  SDMMCx Pointer to SDMMC register base
-  * @retval Command index of the last command response received
+  * @retval Command counter of the last command response received
   */
 uint8_t SDMMC_GetCommandResponse(SDMMC_TypeDef *SDMMCx)
 {
@@ -1262,7 +1262,7 @@ static uint32_t SDMMC_GetCmdError(SDMMC_TypeDef *SDMMCx)
 /**
   * @brief  Checks for error conditions for R1 response.
   * @param  hsd SD handle
-  * @param  SD_CMD The sent command index
+  * @param  SD_CMD The sent command counter
   * @retval SD Card error state
   */
 static uint32_t SDMMC_GetCmdResp1(SDMMC_TypeDef *SDMMCx, uint8_t SD_CMD, uint32_t Timeout)
@@ -1484,7 +1484,7 @@ static uint32_t SDMMC_GetCmdResp3(SDMMC_TypeDef *SDMMCx)
 /**
   * @brief  Checks for error conditions for R6 (RCA) response.
   * @param  hsd SD handle
-  * @param  SD_CMD The sent command index
+  * @param  SD_CMD The sent command counter
   * @param  pRCA Pointer to the variable that will contain the SD card relative
   *         address RCA
   * @retval SD Card error state

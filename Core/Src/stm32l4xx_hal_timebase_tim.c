@@ -20,10 +20,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "stm32l4xx_it.h"
-
 #include "stm32l4xx_hal.h"
-#include "stm32l4xx_hal_tim.h"
+//#include "stm32l4xx_hal_tim.h"
+
+#include "stm32l4xx_it.h"
 
 
 /* Private typedef -----------------------------------------------------------*/

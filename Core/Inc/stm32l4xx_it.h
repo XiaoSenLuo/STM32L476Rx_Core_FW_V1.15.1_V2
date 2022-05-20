@@ -33,7 +33,7 @@
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-#include "stm32l4xx.h"
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -43,7 +43,7 @@
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+#include "stm32l4xx_hal.h"
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -93,9 +93,10 @@ typedef void (*st_irq_handler_callback_t)(void);
 
 typedef void (*isr_function_handle_t)(void* ctx);
 
-void ll_peripheral_isr_install(IRQn_Type _irq_num, isr_function_handle_t fn, void *ctx);
-void ll_peripheral_isr_uninstall(IRQn_Type _irq_num);
+typedef IRQn_Type IRQn_Type_t;
 
+void ll_peripheral_isr_install(IRQn_Type_t _irq_num, isr_function_handle_t fn, void *ctx);
+void ll_peripheral_isr_uninstall(IRQn_Type_t _irq_num);
 
 typedef enum{
     GPIO0 = 0,
@@ -116,26 +117,9 @@ typedef enum{
     GPIO15 = 15,
 }gpio_num_t;
 
-static const int GPIO_IRQn[16] = {
-        EXTI0_IRQn,
-        EXTI1_IRQn,
-        EXTI2_IRQn,
-        EXTI3_IRQn,
-        EXTI4_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-};
 
 int gpio_mask2num(uint32_t mask);
+int gpio_get_irqn(gpio_num_t gpio_num);
 
 void ll_gpio_exti_isr_install(gpio_num_t gpio, isr_function_handle_t fn, void *ctx);
 void ll_gpio_exti_isr_uninstall(gpio_num_t gpio);

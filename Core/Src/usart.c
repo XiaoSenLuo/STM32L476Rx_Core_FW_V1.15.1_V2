@@ -18,49 +18,48 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "usart.h"
+
 
 /* USER CODE BEGIN 0 */
-
-#include "stm32l4xx_hal_gpio.h"
-#include "stm32l4xx_hal_dma.h"
-#include "stm32l4xx_hal_rcc.h"
 #include "stm32l4xx_it.h"
-///#include "stm32l4xx_ll_usart.h"
+#include "usart.h"
 
+#define USART1_DATA_BUFFER_SIZE               (512)
 
-#define USART1_DATA_BUFFER_SIZE               (1024)
 
 typedef struct uart_transmit_s {
-    struct{
-        uint8_t data[USART1_DATA_BUFFER_SIZE];
-        uint16_t length;
-        uint16_t position;
-    }tx;
-    struct{
-        uint8_t data[USART1_DATA_BUFFER_SIZE];
-        uint16_t length;
-        uint16_t position;
-    }rx;
+    uint8_t data[USART1_DATA_BUFFER_SIZE];
+    int16_t length;
+    int16_t tail;
+    int16_t head;
 }uart_transmit_t;
 
-static uart_transmit_t uart1_transmit = {
-        .rx = {
-                .data = {0},
-                .length = USART1_DATA_BUFFER_SIZE >> 1,
-                .position = 0,
-                },
-        .tx = {
-                .data = {0},
-                .length = USART1_DATA_BUFFER_SIZE >> 1,
-                .position = 0,
-                },
+static uart_transmit_t rx_message = {
+    .data = {0},
+    .length = -1,
+    .head = 0,
+    .tail = 0,
+};
+
+static uart_transmit_t user_rx_message = {
+        .data = {0},
+        .length = -1,
+        .head = 0,
+        .tail = 0,
+};
+
+static uart_transmit_t tx_message = {
+        .data = {0},
+        .length = -1,
+        .head = 0,
+        .tail = 0,
 };
 
 
 static UART_HandleTypeDef huart1 = { 0 };
 static DMA_HandleTypeDef hdma_usart1_rx = {0};
 static DMA_HandleTypeDef hdma_usart1_tx = {0};
+
 
 static void dma_usart1_tx_isr_handler(void* ctx){
     HAL_DMA_IRQHandler((DMA_HandleTypeDef*)ctx);
@@ -71,9 +70,48 @@ static void dma_usart1_rx_isr_handler(void* ctx){
 }
 
 static void usart1_isr_handler(void* ctx){
+    UART_HandleTypeDef* handle = (UART_HandleTypeDef*)ctx;
+    uint32_t uart_isr_flag = READ_REG(handle->Instance->ISR);
+    if(uart_isr_flag & UART_FLAG_IDLE){   /// 空闲
+        __HAL_UART_CLEAR_FLAG(handle, UART_FLAG_IDLE);
+        uint32_t pos = __HAL_DMA_GET_COUNTER(handle->hdmarx);
+        rx_message.tail = USART1_DATA_BUFFER_SIZE - pos;  /// 计算队尾
+        rx_message.length = rx_message.tail - rx_message.head;  /// 计算队列长度, 默认队尾大于队首
+        if(rx_message.length < 0){ /// 队尾小于队首
+            rx_message.length = USART1_DATA_BUFFER_SIZE + rx_message.length;
+
+        }else{
+
+        }
+        user_rx_message.length = rx_message.length;
+        rx_message.head = rx_message.tail;    /// 更新队首
+
+
+    }
+
     HAL_UART_IRQHandler((UART_HandleTypeDef*)ctx);
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+
+    __HAL_DMA_ENABLE_IT(huart->hdmarx, DMA_IT_TC);
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+    
+}
+
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart){
+
+}
+
+void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart){
+
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
+
+}
 
 int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -153,8 +191,16 @@ int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     if(uart_handle) *uart_handle = &huart1;
 }
 
-int usart1_start_receive(void){
-    HAL_UART_Receive_DMA(&huart1, uart1_transmit.rx.data, uart1_transmit.rx.length);
+int usart1_start_receive(UART_HandleTypeDef *uart_handle){
+    uint32_t err = 0;
+
+    UNUSED(uart_handle);
+
+    err = HAL_UART_Receive_DMA(&huart1, rx_message.data, USART1_DATA_BUFFER_SIZE);
+    __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
+    __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+
+    return (int)err;
 }
 
 /* USER CODE END 0 */

@@ -25,10 +25,10 @@
 /* USER CODE BEGIN Includes */
 
 
-#include "stm32l4xx_it.h"
-#include "stm32l4xx_ll_exti.h"
-#include "stm32l4xx_hal.h"
 
+#include "stm32l4xx_ll_exti.h"
+
+#include "stm32l4xx_it.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -169,14 +169,14 @@ static isr_handle_def_t gpio_exti_handler[16] = {
 
 
 
-void ll_peripheral_isr_install(IRQn_Type _irq_num, isr_function_handle_t fn, void *ctx){
+void ll_peripheral_isr_install(IRQn_Type_t _irq_num, isr_function_handle_t fn, void *ctx){
     if((_irq_num < 0) || (_irq_num > 81)) return;
 
     handler[_irq_num].ctx = ctx;
     handler[_irq_num].isr_func_handle = fn;
 }
 
-void ll_peripheral_isr_uninstall(IRQn_Type _irq_num){
+void ll_peripheral_isr_uninstall(IRQn_Type_t _irq_num){
     if((_irq_num < 0) || (_irq_num > 81)) return;
 
     handler[_irq_num].ctx = NULL;
@@ -213,67 +213,7 @@ void ll_gpio_exti_isr_uninstall(gpio_num_t gpio){
 
 
 /* USER CODE BEGIN EV */
-void st_irq_handler_register(IRQn_Type _irq_num, void *_handler){
-#if(0)
-	switch(_irq_num){
-	case SysTick_IRQn:
-		systick_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case SDMMC1_IRQn:
-		sdmmc1_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case SPI1_IRQn:
-		spi1_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA1_Channel2_IRQn:
-		dma1_ch2_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA1_Channel3_IRQn:
-		dma1_ch3_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA1_Channel4_IRQn:
-		dma1_ch4_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA1_Channel5_IRQn:
-		dma1_ch5_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA2_Channel3_IRQn:
-		dma2_ch3_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA2_Channel4_IRQn:
-		dma2_ch4_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case DMA2_Channel5_IRQn:
-		dma2_ch5_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case LPTIM2_IRQn:
-        lptim2_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case RTC_WKUP_IRQn:
-		rtc_wkup_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case RTC_Alarm_IRQn:
-		rtc_alarm_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case ADC1_2_IRQn:
-		adc_handler_callback = (st_irq_handler_callback_t)_handler;
-		break;
-	case TIM2_IRQn:
-		tim2_handler_callback = (st_irq_handler_callback_t)_handler;
-	default:
-		break;
-	}
 
-#endif
-}
-#if(0)
-void st_exti_irq_handler_register(IRQn_Type _irq_num, uint32_t _exti_line, void *_handler){
-	UNUSED(_irq_num);
-    if(_exti_line > 31) return;
-	((*((st_irq_handler_callback_t*)(exti_line_handler_callback + _exti_line))))
-			= (st_irq_handler_callback_t)_handler;
-}
-#endif
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -414,6 +354,30 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32l4xx.s).                    */
 /******************************************************************************/
+
+static const int GPIO_IRQn[16] = {
+        EXTI0_IRQn,
+        EXTI1_IRQn,
+        EXTI2_IRQn,
+        EXTI3_IRQn,
+        EXTI4_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+};
+
+int gpio_get_irqn(gpio_num_t gpio_num){
+    return GPIO_IRQn[gpio_num];
+}
+
 
 /**
   * @brief This function handles RCC global interrupt.
@@ -860,6 +824,8 @@ void OTG_FS_IRQHandler(void)
     if(handler[OTG_FS_IRQn].isr_func_handle == NULL) return;
     handler[OTG_FS_IRQn].isr_func_handle(handler[OTG_FS_IRQn].ctx);
 }
+
+
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

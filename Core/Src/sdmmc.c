@@ -20,11 +20,6 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "stm32l4xx_it.h"
-#include "stm32l4xx_ll_rcc.h"
-//#include "stm32l4xx_hal.h"
-//#include "stm32l4xx_hal_sd_ex.h"
-#include "stm32l4xx_ll_sdmmc.h"
-//#include "stm32l4xx_hal_sd.h"
 
 #include "sdmmc.h"
 
@@ -227,6 +222,8 @@ int sdmmc_deinitialize(SD_HandleTypeDef *hsd_handle){
     HAL_DMA_DeInit(hsd_handle->hdmatx);
 
     __HAL_RCC_SDMMC1_CLK_DISABLE();
+
+    return err;
 }
 
 /* USER CODE END 0 */

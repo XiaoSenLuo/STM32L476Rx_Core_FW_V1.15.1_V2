@@ -776,7 +776,7 @@ __weak void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc)
   *                    the configuration information for the LTDC.
   * @param  pLayerCfg  pointer to a LTDC_LayerCfgTypeDef structure that contains
   *                    the configuration information for the Layer.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                    This parameter can be one of the following values:
   *                    LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval HAL status
@@ -826,7 +826,7 @@ HAL_StatusTypeDef HAL_LTDC_ConfigLayer(LTDC_HandleTypeDef *hltdc, LTDC_LayerCfgT
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  RGBValue  the color key value
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval HAL status
@@ -864,7 +864,7 @@ HAL_StatusTypeDef HAL_LTDC_ConfigColorKeying(LTDC_HandleTypeDef *hltdc, uint32_t
   *                   the configuration information for the LTDC.
   * @param  pCLUT     pointer to the color lookup table address.
   * @param  CLUTSize  the color lookup table size.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval HAL status
@@ -913,7 +913,7 @@ HAL_StatusTypeDef HAL_LTDC_ConfigCLUT(LTDC_HandleTypeDef *hltdc, uint32_t *pCLUT
   * @brief  Enable the color keying.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -948,7 +948,7 @@ HAL_StatusTypeDef HAL_LTDC_EnableColorKeying(LTDC_HandleTypeDef *hltdc, uint32_t
   * @brief  Disable the color keying.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -983,7 +983,7 @@ HAL_StatusTypeDef HAL_LTDC_DisableColorKeying(LTDC_HandleTypeDef *hltdc, uint32_
   * @brief  Enable the color lookup table.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1018,7 +1018,7 @@ HAL_StatusTypeDef HAL_LTDC_EnableCLUT(LTDC_HandleTypeDef *hltdc, uint32_t LayerI
   * @brief  Disable the color lookup table.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1109,7 +1109,7 @@ HAL_StatusTypeDef HAL_LTDC_DisableDither(LTDC_HandleTypeDef *hltdc)
   *                   the configuration information for the LTDC.
   * @param  XSize     LTDC Pixel per line
   * @param  YSize     LTDC Line number
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1165,7 +1165,7 @@ HAL_StatusTypeDef HAL_LTDC_SetWindowSize(LTDC_HandleTypeDef *hltdc, uint32_t XSi
   *                   the configuration information for the LTDC.
   * @param  X0        LTDC window X offset
   * @param  Y0        LTDC window Y offset
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                         This parameter can be one of the following values:
   *                         LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1216,7 +1216,7 @@ HAL_StatusTypeDef HAL_LTDC_SetWindowPosition(LTDC_HandleTypeDef *hltdc, uint32_t
   * @param  hltdc        pointer to a LTDC_HandleTypeDef structure that contains
   *                      the configuration information for the LTDC.
   * @param  Pixelformat  new pixel format value.
-  * @param  LayerIdx     LTDC Layer index.
+  * @param  LayerIdx     LTDC Layer counter.
   *                      This parameter can be one of the following values:
   *                      LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1).
   * @retval  HAL status
@@ -1261,7 +1261,7 @@ HAL_StatusTypeDef HAL_LTDC_SetPixelFormat(LTDC_HandleTypeDef *hltdc, uint32_t Pi
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  Alpha     new alpha value.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1305,7 +1305,7 @@ HAL_StatusTypeDef HAL_LTDC_SetAlpha(LTDC_HandleTypeDef *hltdc, uint32_t Alpha, u
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  Address   new address value.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1).
   * @retval  HAL status
@@ -1354,7 +1354,7 @@ HAL_StatusTypeDef HAL_LTDC_SetAddress(LTDC_HandleTypeDef *hltdc, uint32_t Addres
   * @param  hltdc              pointer to a LTDC_HandleTypeDef structure that contains
   *                            the configuration information for the LTDC.
   * @param  LinePitchInPixels  New line pitch in pixels to configure for LTDC layer 'LayerIdx'.
-  * @param  LayerIdx           LTDC layer index concerned by the modification of line pitch.
+  * @param  LayerIdx           LTDC layer counter concerned by the modification of line pitch.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_LTDC_SetPitch(LTDC_HandleTypeDef *hltdc, uint32_t LinePitchInPixels, uint32_t LayerIdx)
@@ -1499,7 +1499,7 @@ HAL_StatusTypeDef  HAL_LTDC_Reload(LTDC_HandleTypeDef *hltdc, uint32_t ReloadTyp
   *                    the configuration information for the LTDC.
   * @param  pLayerCfg  pointer to a LTDC_LayerCfgTypeDef structure that contains
   *                    the configuration information for the Layer.
-  * @param  LayerIdx   LTDC Layer index.
+  * @param  LayerIdx   LTDC Layer counter.
   *                    This parameter can be one of the following values:
   *                    LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval HAL status
@@ -1548,7 +1548,7 @@ HAL_StatusTypeDef HAL_LTDC_ConfigLayer_NoReload(LTDC_HandleTypeDef *hltdc, LTDC_
   *                   the configuration information for the LTDC.
   * @param  XSize     LTDC Pixel per line
   * @param  YSize     LTDC Line number
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1602,7 +1602,7 @@ HAL_StatusTypeDef HAL_LTDC_SetWindowSize_NoReload(LTDC_HandleTypeDef *hltdc, uin
   *                   the configuration information for the LTDC.
   * @param  X0        LTDC window X offset
   * @param  Y0        LTDC window Y offset
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                         This parameter can be one of the following values:
   *                         LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1651,7 +1651,7 @@ HAL_StatusTypeDef HAL_LTDC_SetWindowPosition_NoReload(LTDC_HandleTypeDef *hltdc,
   * @param  hltdc        pointer to a LTDC_HandleTypeDfef structure that contains
   *                      the configuration information for the LTDC.
   * @param  Pixelformat  new pixel format value.
-  * @param  LayerIdx     LTDC Layer index.
+  * @param  LayerIdx     LTDC Layer counter.
   *                      This parameter can be one of the following values:
   *                      LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1).
   * @retval  HAL status
@@ -1694,7 +1694,7 @@ HAL_StatusTypeDef HAL_LTDC_SetPixelFormat_NoReload(LTDC_HandleTypeDef *hltdc, ui
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  Alpha     new alpha value.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1737,7 +1737,7 @@ HAL_StatusTypeDef HAL_LTDC_SetAlpha_NoReload(LTDC_HandleTypeDef *hltdc, uint32_t
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  Address   new address value.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1).
   * @retval  HAL status
@@ -1784,7 +1784,7 @@ HAL_StatusTypeDef HAL_LTDC_SetAddress_NoReload(LTDC_HandleTypeDef *hltdc, uint32
   * @param  hltdc              pointer to a LTDC_HandleTypeDef structure that contains
   *                            the configuration information for the LTDC.
   * @param  LinePitchInPixels  New line pitch in pixels to configure for LTDC layer 'LayerIdx'.
-  * @param  LayerIdx           LTDC layer index concerned by the modification of line pitch.
+  * @param  LayerIdx           LTDC layer counter concerned by the modification of line pitch.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_LTDC_SetPitch_NoReload(LTDC_HandleTypeDef *hltdc, uint32_t LinePitchInPixels, uint32_t LayerIdx)
@@ -1849,7 +1849,7 @@ HAL_StatusTypeDef HAL_LTDC_SetPitch_NoReload(LTDC_HandleTypeDef *hltdc, uint32_t
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  RGBValue the color key value
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval HAL status
@@ -1883,7 +1883,7 @@ HAL_StatusTypeDef HAL_LTDC_ConfigColorKeying_NoReload(LTDC_HandleTypeDef *hltdc,
   *         Variant of the function HAL_LTDC_EnableColorKeying without immediate reload.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1916,7 +1916,7 @@ HAL_StatusTypeDef HAL_LTDC_EnableColorKeying_NoReload(LTDC_HandleTypeDef *hltdc,
   *         Variant of the function HAL_LTDC_DisableColorKeying without immediate reload.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1949,7 +1949,7 @@ HAL_StatusTypeDef HAL_LTDC_DisableColorKeying_NoReload(LTDC_HandleTypeDef *hltdc
   *         Variant of the function HAL_LTDC_EnableCLUT without immediate reload.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -1982,7 +1982,7 @@ HAL_StatusTypeDef HAL_LTDC_EnableCLUT_NoReload(LTDC_HandleTypeDef *hltdc, uint32
   *         Variant of the function HAL_LTDC_DisableCLUT without immediate reload.
   * @param  hltdc     pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values:
   *                   LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval  HAL status
@@ -2069,7 +2069,7 @@ uint32_t HAL_LTDC_GetError(LTDC_HandleTypeDef *hltdc)
   * @param  hltdc     Pointer to a LTDC_HandleTypeDef structure that contains
   *                   the configuration information for the LTDC.
   * @param  pLayerCfg Pointer LTDC Layer Configuration structure
-  * @param  LayerIdx  LTDC Layer index.
+  * @param  LayerIdx  LTDC Layer counter.
   *                   This parameter can be one of the following values: LTDC_LAYER_1 (0) or LTDC_LAYER_2 (1)
   * @retval None
   */

@@ -47,7 +47,8 @@
 #include "gps.h"
 #include "fatfs.h"
 #include "config_ini.h"
-#include "ads127.h"
+
+#include "bsp_ads127.h"
 
 #include "main.h"
 /* USER CODE END Includes */
@@ -782,8 +783,10 @@ static void mco_disable(void){
 
 typedef struct __SPI_HandleTypeDef * SPI_HandleTypeDef_Handle;
 
-SPI_HandleTypeDef_Handle spi1_Handle = NULL;
+static SPI_HandleTypeDef_Handle spi1_handle = NULL;
+static FATFS *fs = NULL;
 
+static FIL ads_data_file = { 0 };
 
 /* USER CODE END 0 */
 
@@ -828,8 +831,8 @@ int main(void){
         HAL_Delay(100);
 
     }
-    if(0){
-        FATFS *fs = NULL;
+    if(1){
+
         int err = 0;
         err = FATFS_SD_Init(&fs);
 #if(0)
@@ -840,15 +843,23 @@ int main(void){
         f_close(file);
 #endif
         FS_FileOperations();
+        err = f_open(&ads_data_file, "data.bin", FA_CREATE_ALWAYS | FA_WRITE);
+        if(err != FR_OK){
+            while(1){
+                HAL_Delay(1000);
+            }
+        }
     }
 
-    if(0){
+    if(1){
 
-        st_spi1_init(&spi1_Handle);
+        st_spi1_init(&spi1_handle);
         ads127_bsp_reset_pin_initial(GPIOC, GPIO_PIN_4);
+        ads127_bsp_start_pin_initial(GPIOC, GPIO_PIN_5);
+
         ads127_bsp_reset();
-        ads127_driver_initialaiz(spi1_Handle, GPIOA, GPIO_PIN_4);
-        if(1){
+        ads127_driver_initialaiz(spi1_handle, GPIOA, GPIO_PIN_4);
+        if(0){
             ads127_dev_t device = {
                     0
             };
@@ -857,7 +868,7 @@ int main(void){
             ads127_get_mode(&device);
             HAL_Delay(100);
         }
-        if(1){
+        if(0){
             ads127_dev_t device = {
                     .config.val = 0x00,
             };
@@ -867,7 +878,7 @@ int main(void){
             ret = ads127_get_configure(&device);
             HAL_Delay(ret);
         }
-        if(1){
+        if(0){
             ads127_dev_t device = {
                     .ofc.val = 0x00112233,
             };
@@ -876,7 +887,7 @@ int main(void){
             ads127_get_ofc(&device);
             HAL_Delay(100);
         }
-        if(1){
+        if(0){
             ads127_dev_t device = {
                     .fsc.val = 0x1122,
             };
@@ -886,7 +897,6 @@ int main(void){
             HAL_Delay(100);
         }
         HAL_Delay(100);
-        ads127_bsp_start_pin_initial(GPIOC, GPIO_PIN_5);
 
         ads127_dev_t device = ADS127_DEFAULT_DEVICE();
         ads127_get_id(&device);
@@ -899,11 +909,11 @@ int main(void){
                 .clk = MCO_FREQ_16M,
         };
         read_init.config.val = device.config.val;
-        read_init.crate = UINT32_MAX;
-        read_init.osr = ads127_get_osr(&device);
+        read_init.crate = UINT32_MAX;  /// 最大采样率
+        read_init.osr = ads127_get_osr(&device);  /// 获取过采样因子
         ads127_bsp_read_init(&read_init);
-        ads127_bsp_drdy_isr_install(GPIOB, GPIO_PIN_1, ads127_bsp_read_data_from_isr, NULL);
-
+        ads127_bsp_drdy_isr_install(GPIOB, GPIO_PIN_1, ads127_bsp_read_data_from_isr, spi1_handle);
+        ads127_bsp_enable_drdy();
         ads127_bsp_start();
     }
 
@@ -913,7 +923,8 @@ int main(void){
 
 
     while(1){
-
+        if(ads127_bsp_availablle() == 0) continue;
+        ads127_bsp_write_file(&ads_data_file);
     }
 
     /* USER CODE END SysInit */
@@ -1105,6 +1116,7 @@ void RTCClockLSE_Config(void){
 
 #endif
 }
+
 
 #if(0)
 

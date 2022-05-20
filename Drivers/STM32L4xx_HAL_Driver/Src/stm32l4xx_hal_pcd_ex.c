@@ -73,7 +73,7 @@ HAL_StatusTypeDef HAL_PCDEx_SetTxFiFo(PCD_HandleTypeDef *hpcd, uint8_t fifo, uin
   uint8_t i;
   uint32_t Tx_Offset;
 
-  /*  TXn min size = 16 words. (n  : Transmit FIFO index)
+  /*  TXn min size = 16 words. (n  : Transmit FIFO counter)
       When a TxFIFO is not used, the Configuration should be as follows:
           case 1 :  n > m    and Txn is not used    (n,m  : Transmit FIFO indexes)
          --> Txm can use the space allocated for Txn.

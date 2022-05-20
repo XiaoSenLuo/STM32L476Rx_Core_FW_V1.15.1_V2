@@ -294,7 +294,7 @@ void LL_DMA2D_StructInit(LL_DMA2D_InitTypeDef *DMA2D_InitStruct)
   * @param  DMA2Dx DMA2D Instance
   * @param  DMA2D_LayerCfg  pointer to a LL_DMA2D_LayerCfgTypeDef structure that contains
   *         the configuration information for the specified layer.
-  * @param  LayerIdx  DMA2D Layer index.
+  * @param  LayerIdx  DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   0(background) / 1(foreground)
   * @retval None

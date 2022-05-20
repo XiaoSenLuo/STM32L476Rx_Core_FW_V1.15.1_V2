@@ -194,7 +194,7 @@ typedef struct {
 	DWORD	c_ofs;			/* Offset in the containing directory (valid when file object and sclust != 0) */
 #endif
 #if FF_FS_LOCK
-	UINT	lockid;			/* File lock ID origin from 1 (index of file semaphore table Files[]) */
+	UINT	lockid;			/* File lock ID origin from 1 (counter of file semaphore table Files[]) */
 #endif
 } FFOBJID;
 

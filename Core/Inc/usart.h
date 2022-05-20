@@ -27,14 +27,14 @@
 
 
 /* USER CODE BEGIN Includes */
-#include "stm32l4xx_it.h"
+#include "stm32l4xx_hal.h"
 
 /* USER CODE END Includes */
 
 
 int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
 
-int usart1_start_receive(void);
+int usart1_start_receive(UART_HandleTypeDef *uart_handle);
 
 #if(0)
 extern UART_HandleTypeDef huart4;

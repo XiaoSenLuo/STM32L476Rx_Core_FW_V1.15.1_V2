@@ -27,11 +27,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "ff_gen_drv.h"
-#include "sd_diskio.h"
-#include "bsp_driver_sd.h"
 #include "diskio.h"
 #include "stm32l4xx_ll_dma.h"
-
+#include "sdmmc.h"
+#include "sd_diskio.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* use the default SD timout as defined in the platform BSP driver*/
@@ -180,6 +179,7 @@ int SD_read(uint8_t lun, uint8_t *buff, uint32_t sector, uint16_t count)
     uint32_t timeout = SD_TIMEOUT;
     if(sd_detect()) return 3;
 #if(1)
+
     LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
     LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_4, LL_DMA_REQUEST_7);
     hsd_handle->hdmarx->Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -247,6 +247,7 @@ int SD_write(uint8_t lun, const uint8_t *buff, uint32_t sector, uint16_t count)
 //    UNUSED(lun);
     if(sd_detect()) return 3;
 #if(1)
+
     LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
     LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_4, LL_DMA_REQUEST_7);
     hsd_handle->hdmatx->Init.Direction = DMA_MEMORY_TO_PERIPH;
@@ -273,6 +274,7 @@ int SD_write(uint8_t lun, const uint8_t *buff, uint32_t sector, uint16_t count)
     err = HAL_SD_WriteBlocks(hsd_handle, buff, sector, count, 1000);
 #endif
     end_section:
+
   return err;
 }
 
@@ -343,8 +345,6 @@ int sd_driver_register(char* out_path){
             .disk_status = SD_status,
     };
     err = FATFS_LinkDriver(&io_drv, out_path);
-
-//    err = sdmmc_initialize(&hsd_handle);
     return err;
 }
 /* USER CODE BEGIN afterIoctlSection */

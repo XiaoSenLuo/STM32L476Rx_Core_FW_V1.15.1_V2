@@ -1551,13 +1551,13 @@ HAL_StatusTypeDef HAL_PKA_Abort(PKA_HandleTypeDef *hpka)
   */
 void HAL_PKA_RAMReset(PKA_HandleTypeDef *hpka)
 {
-  uint32_t index;
+  uint32_t counter;
 
   /* For each element in the PKA RAM */
-  for (index = 0; index < PKA_RAM_SIZE; index++)
+  for (counter = 0; counter < PKA_RAM_SIZE; counter++)
   {
     /* Clear the content */
-    hpka->Instance->RAM[index] = 0UL;
+    hpka->Instance->RAM[counter] = 0UL;
   }
 }
 
@@ -1839,7 +1839,7 @@ void PKA_Memcpy_u32_to_u8(uint8_t dst[], __IO const uint32_t src[], size_t n)
   {
     if (src != NULL)
     {
-      uint32_t index_uint32_t = 0UL; /* This index is used outside of the loop */
+      uint32_t index_uint32_t = 0UL; /* This counter is used outside of the loop */
 
       for (; index_uint32_t < (n / 4UL); index_uint32_t++)
       {
@@ -1889,32 +1889,32 @@ void PKA_Memcpy_u8_to_u32(__IO uint32_t dst[], const uint8_t src[], size_t n)
   {
     if (src != NULL)
     {
-      uint32_t index = 0UL; /* This index is used outside of the loop */
+      uint32_t counter = 0UL; /* This counter is used outside of the loop */
 
-      for (; index < (n / 4UL); index++)
+      for (; counter < (n / 4UL); counter++)
       {
         /* Apply the equivalent of __REV from uint8_t to uint32_t */
-        dst[index] = ((uint32_t)src[(n - (index * 4UL) - 1UL)]) \
-                     | ((uint32_t)src[(n - (index * 4UL) - 2UL)] << 8UL) \
-                     | ((uint32_t)src[(n - (index * 4UL) - 3UL)] << 16UL) \
-                     | ((uint32_t)src[(n - (index * 4UL) - 4UL)] << 24UL);
+        dst[counter] = ((uint32_t)src[(n - (counter * 4UL) - 1UL)]) \
+                     | ((uint32_t)src[(n - (counter * 4UL) - 2UL)] << 8UL) \
+                     | ((uint32_t)src[(n - (counter * 4UL) - 3UL)] << 16UL) \
+                     | ((uint32_t)src[(n - (counter * 4UL) - 4UL)] << 24UL);
       }
 
       /* Manage the buffers not aligned on uint32_t */
       if ((n % 4UL) == 1UL)
       {
-        dst[index] = (uint32_t)src[(n - (index * 4UL) - 1UL)];
+        dst[counter] = (uint32_t)src[(n - (counter * 4UL) - 1UL)];
       }
       else if ((n % 4UL) == 2UL)
       {
-        dst[index] = ((uint32_t)src[(n - (index * 4UL) - 1UL)]) \
-                     | ((uint32_t)src[(n - (index * 4UL) - 2UL)] << 8UL);
+        dst[counter] = ((uint32_t)src[(n - (counter * 4UL) - 1UL)]) \
+                     | ((uint32_t)src[(n - (counter * 4UL) - 2UL)] << 8UL);
       }
       else if ((n % 4UL) == 3UL)
       {
-        dst[index] = ((uint32_t)src[(n - (index * 4UL) - 1UL)]) \
-                     | ((uint32_t)src[(n - (index * 4UL) - 2UL)] << 8UL) \
-                     | ((uint32_t)src[(n - (index * 4UL) - 3UL)] << 16UL);
+        dst[counter] = ((uint32_t)src[(n - (counter * 4UL) - 1UL)]) \
+                     | ((uint32_t)src[(n - (counter * 4UL) - 2UL)] << 8UL) \
+                     | ((uint32_t)src[(n - (counter * 4UL) - 3UL)] << 16UL);
       }
       else
       {
@@ -1940,10 +1940,10 @@ void PKA_Memcpy_u32_to_u32(__IO uint32_t dst[], __IO const uint32_t src[], size_
     if (src != NULL)
     {
       /* For each element in the array */
-      for (uint32_t index = 0UL; index < n; index++)
+      for (uint32_t counter = 0UL; counter < n; counter++)
       {
         /* Copy the content */
-        dst[index] = src[index];
+        dst[counter] = src[counter];
       }
     }
   }

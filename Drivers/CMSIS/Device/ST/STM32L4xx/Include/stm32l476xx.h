@@ -7,7 +7,7 @@
   *          This file contains:
   *           - Data structures and the address mapping for all peripherals
   *           - Peripheral's registers declarations and bits definition
-  *           - Macros to access peripheral’s registers hardware
+  *           - Macros to access peripheralï¿½s registers hardware
   *
   ******************************************************************************
   * @attention
@@ -12929,7 +12929,7 @@ typedef struct
 /*****************  Bit definition for SDMMC_RESPCMD register  *****************/
 #define SDMMC_RESPCMD_RESPCMD_Pos       (0U)
 #define SDMMC_RESPCMD_RESPCMD_Msk       (0x3FUL << SDMMC_RESPCMD_RESPCMD_Pos)  /*!< 0x0000003F */
-#define SDMMC_RESPCMD_RESPCMD           SDMMC_RESPCMD_RESPCMD_Msk              /*!<Response command index */
+#define SDMMC_RESPCMD_RESPCMD           SDMMC_RESPCMD_RESPCMD_Msk              /*!<Response command counter */
 
 /******************  Bit definition for SDMMC_RESP1 register  ******************/
 #define SDMMC_RESP1_CARDSTATUS1_Pos     (0U)

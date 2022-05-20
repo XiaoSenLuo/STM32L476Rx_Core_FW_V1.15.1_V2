@@ -27,7 +27,7 @@
 
 /* USER CODE BEGIN Includes */
 
-#include "stm32l4xx_it.h"
+#include "stm32l4xx_hal.h"
 #include "stm32l4xx_ll_gpio.h"
 
 /* USER CODE END Includes */

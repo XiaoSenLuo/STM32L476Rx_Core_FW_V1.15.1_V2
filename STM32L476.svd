@@ -32515,7 +32515,7 @@
                   </field>
                   <field>
                      <name>CMDINDEX</name>
-                     <description>Command index</description>
+                     <description>Command counter</description>
                      <bitOffset>0</bitOffset>
                      <bitWidth>6</bitWidth>
                   </field>
@@ -32532,7 +32532,7 @@
                <fields>
                   <field>
                      <name>RESPCMD</name>
-                     <description>Response command index</description>
+                     <description>Response command counter</description>
                      <bitOffset>0</bitOffset>
                      <bitWidth>6</bitWidth>
                   </field>

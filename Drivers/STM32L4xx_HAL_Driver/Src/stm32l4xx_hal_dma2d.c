@@ -989,7 +989,7 @@ HAL_StatusTypeDef HAL_DMA2D_Resume(DMA2D_HandleTypeDef *hdma2d)
   * @brief  Enable the DMA2D CLUT Transfer.
   * @param  hdma2d   Pointer to a DMA2D_HandleTypeDef structure that contains
   *                   the configuration information for the DMA2D.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1025,7 +1025,7 @@ HAL_StatusTypeDef HAL_DMA2D_EnableCLUT(DMA2D_HandleTypeDef *hdma2d, uint32_t Lay
   *                   the configuration information for the DMA2D.
   * @param  CLUTCfg  Pointer to a DMA2D_CLUTCfgTypeDef structure that contains
   *                   the configuration information for the color look up table.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1079,7 +1079,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTStartLoad(DMA2D_HandleTypeDef *hdma2d, DMA2D_CLU
   *                   the configuration information for the DMA2D.
   * @param  CLUTCfg  Pointer to a DMA2D_CLUTCfgTypeDef structure that contains
   *                   the configuration information for the color look up table.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1139,7 +1139,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTStartLoad_IT(DMA2D_HandleTypeDef *hdma2d, DMA2D_
   *                   the configuration information for the DMA2D.
   * @param  CLUTCfg  Pointer to a DMA2D_CLUTCfgTypeDef structure that contains
   *                   the configuration information for the color look up table.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @note API obsolete and maintained for compatibility with legacy. User is
@@ -1196,7 +1196,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTLoad(DMA2D_HandleTypeDef *hdma2d, DMA2D_CLUTCfgT
   *                   the configuration information for the DMA2D.
   * @param  CLUTCfg  Pointer to a DMA2D_CLUTCfgTypeDef structure that contains
   *                   the configuration information for the color look up table.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @note API obsolete and maintained for compatibility with legacy. User is
@@ -1257,7 +1257,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTLoad_IT(DMA2D_HandleTypeDef *hdma2d, DMA2D_CLUTC
   * @brief  Abort the DMA2D CLUT loading.
   * @param  hdma2d  Pointer to a DMA2D_HandleTypeDef structure that contains
   *                  the configuration information for the DMA2D.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1314,7 +1314,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTLoading_Abort(DMA2D_HandleTypeDef *hdma2d, uint3
   * @brief  Suspend the DMA2D CLUT loading.
   * @param  hdma2d Pointer to a DMA2D_HandleTypeDef structure that contains
   *                 the configuration information for the DMA2D.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1375,7 +1375,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTLoading_Suspend(DMA2D_HandleTypeDef *hdma2d, uin
   * @brief  Resume the DMA2D CLUT loading.
   * @param  hdma2d pointer to a DMA2D_HandleTypeDef structure that contains
   *                 the configuration information for the DMA2D.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1775,7 +1775,7 @@ __weak void HAL_DMA2D_CLUTLoadingCpltCallback(DMA2D_HandleTypeDef *hdma2d)
   *         parameters in the DMA2D_HandleTypeDef.
   * @param  hdma2d Pointer to a DMA2D_HandleTypeDef structure that contains
   *                 the configuration information for the DMA2D.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @retval HAL status
@@ -1869,7 +1869,7 @@ HAL_StatusTypeDef HAL_DMA2D_ConfigLayer(DMA2D_HandleTypeDef *hdma2d, uint32_t La
   *                   the configuration information for the DMA2D.
   * @param  CLUTCfg  Pointer to a DMA2D_CLUTCfgTypeDef structure that contains
   *                   the configuration information for the color look up table.
-  * @param  LayerIdx DMA2D Layer index.
+  * @param  LayerIdx DMA2D Layer counter.
   *                   This parameter can be one of the following values:
   *                   DMA2D_BACKGROUND_LAYER(0) / DMA2D_FOREGROUND_LAYER(1)
   * @note API obsolete and maintained for compatibility with legacy. User is invited

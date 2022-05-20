@@ -172,7 +172,7 @@ HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma)
 
   assert_param(IS_DMA_ALL_REQUEST(hdma->Init.Request));
 
-  /* Compute the channel index */
+  /* Compute the channel counter */
   if ((uint32_t)(hdma->Instance) < (uint32_t)(DMA2_Channel1))
   {
     /* DMA1 */
@@ -306,7 +306,7 @@ HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
   /* Disable the selected DMA Channelx */
   __HAL_DMA_DISABLE(hdma);
 
-  /* Compute the channel index */
+  /* Compute the channel counter */
   if ((uint32_t)(hdma->Instance) < (uint32_t)(DMA2_Channel1))
   {
     /* DMA1 */

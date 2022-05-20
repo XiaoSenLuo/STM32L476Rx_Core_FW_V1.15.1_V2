@@ -950,7 +950,7 @@ static int enq_lock (void)	/* Check if an entry is available for a new object */
 }
 
 
-static UINT inc_lock (	/* Increment object open counter and returns its index (0:Internal error) */
+static UINT inc_lock (	/* Increment object open counter and returns its counter (0:Internal error) */
 	DIR* dp,	/* Directory object pointing the file to register or increment */
 	int acc		/* Desired access (0:Read, 1:Write, 2:Delete/Rename) */
 )
@@ -982,7 +982,7 @@ static UINT inc_lock (	/* Increment object open counter and returns its index (0
 
 
 static FRESULT dec_lock (	/* Decrement object open counter */
-	UINT i			/* Semaphore index (1..) */
+	UINT i			/* Semaphore counter (1..) */
 )
 {
 	WORD n;
@@ -997,7 +997,7 @@ static FRESULT dec_lock (	/* Decrement object open counter */
 		if (n == 0) Files[i].fs = 0;	/* Delete the entry if open count gets zero */
 		res = FR_OK;
 	} else {
-		res = FR_INT_ERR;		/* Invalid index nunber */
+		res = FR_INT_ERR;		/* Invalid counter nunber */
 	}
 	return res;
 }
@@ -1208,7 +1208,7 @@ static DWORD get_fat (		/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFF
 
 static FRESULT put_fat (	/* FR_OK(0):succeeded, !=0:error */
 	FATFS* fs,		/* Corresponding filesystem object */
-	DWORD clst,		/* FAT index number (cluster number) to be changed */
+	DWORD clst,		/* FAT counter number (cluster number) to be changed */
 	DWORD val		/* New value to be set to the entry */
 )
 {
@@ -1660,7 +1660,7 @@ static FRESULT dir_clear (	/* Returns FR_OK or FR_DISK_ERR */
 
 
 /*-----------------------------------------------------------------------*/
-/* Directory handling - Set directory index                              */
+/* Directory handling - Set directory counter                              */
 /*-----------------------------------------------------------------------*/
 
 static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
@@ -1683,7 +1683,7 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
 	}
 
 	if (clst == 0) {	/* Static table (root-directory on the FAT volume) */
-		if (ofs / SZDIRE >= fs->n_rootdir) return FR_INT_ERR;	/* Is index out of range? */
+		if (ofs / SZDIRE >= fs->n_rootdir) return FR_INT_ERR;	/* Is counter out of range? */
 		dp->sect = fs->dirbase;
 
 	} else {			/* Dynamic table (sub-directory or root-directory on the FAT32/exFAT volume) */
@@ -1708,7 +1708,7 @@ static FRESULT dir_sdi (	/* FR_OK(0):succeeded, !=0:error */
 
 
 /*-----------------------------------------------------------------------*/
-/* Directory handling - Move directory table index next                  */
+/* Directory handling - Move directory table counter next                  */
 /*-----------------------------------------------------------------------*/
 
 static FRESULT dir_next (	/* FR_OK(0):succeeded, FR_NO_FILE:End of table, FR_DENIED:Could not stretch */
@@ -3315,7 +3315,7 @@ static UINT find_volume (	/* Returns BS status found in the hosting drive */
 	for (i = 0; i < 4; i++) {		/* Load partition offset in the MBR */
 		mbr_pt[i] = ld_dword(fs->win + MBR_Table + i * SZ_PTE + PTE_StLba);
 	}
-	i = part ? part - 1 : 0;		/* Table index to find first */
+	i = part ? part - 1 : 0;		/* Table counter to find first */
 	do {							/* Find an FAT volume */
 		fmt = mbr_pt[i] ? check_fs(fs, mbr_pt[i]) : 3;	/* Check if the partition is FAT */
 	} while (part == 0 && fmt >= 2 && ++i < 4);
@@ -4644,7 +4644,7 @@ FRESULT f_readdir (
 			if (res == FR_NO_FILE) res = FR_OK;	/* Ignore end of directory */
 			if (res == FR_OK) {				/* A valid entry is found */
 				get_fileinfo(dp, fno);		/* Get the object information */
-				res = dir_next(dp, 0);		/* Increment index for next */
+				res = dir_next(dp, 0);		/* Increment counter for next */
 				if (res == FR_NO_FILE) res = FR_OK;	/* Ignore end of directory now */
 			}
 			FREE_NAMBUF();
@@ -5693,7 +5693,7 @@ static FRESULT create_partition (
 		nxt_alloc = 2 + sz_ptbl;			/* First allocatable sector */
 		sz_pool = top_bpt - nxt_alloc;		/* Size of allocatable area */
 		bcc = 0xFFFFFFFF; sz_part = 1;
-		pi = si = 0;	/* partition table index, size table index */
+		pi = si = 0;	/* partition table counter, size table counter */
 		do {
 			if (pi * SZ_GPTE % ss == 0) memset(buf, 0, ss);	/* Clean the buffer if needed */
 			if (sz_part != 0) {				/* Is the size table not termintated? */
@@ -6472,7 +6472,7 @@ TCHAR* f_gets (
 
 typedef struct {
 	FIL *fp;		/* Ptr to the writing file */
-	int idx, nchr;	/* Write index of buf[] (-1:error), number of encoding units written */
+	int idx, nchr;	/* Write counter of buf[] (-1:error), number of encoding units written */
 #if FF_USE_LFN && FF_LFN_UNICODE == 1
 	WCHAR hs;
 #elif FF_USE_LFN && FF_LFN_UNICODE == 2
@@ -6501,7 +6501,7 @@ static void putc_bfd (putbuff* pb, TCHAR c)
 		putc_bfd(pb, '\r');
 	}
 
-	i = pb->idx;			/* Write index of pb->buf[] */
+	i = pb->idx;			/* Write counter of pb->buf[] */
 	if (i < 0) return;		/* In write error? */
 	nc = pb->nchr;			/* Write unit counter */
 

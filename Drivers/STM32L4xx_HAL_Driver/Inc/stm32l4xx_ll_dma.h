@@ -46,7 +46,7 @@ extern "C" {
 /** @defgroup DMA_LL_Private_Variables DMA Private Variables
   * @{
   */
-/* Array used to get the DMA channel register offset versus channel index LL_DMA_CHANNEL_x */
+/* Array used to get the DMA channel register offset versus channel counter LL_DMA_CHANNEL_x */
 static const uint8_t CHANNEL_OFFSET_TAB[] =
 {
   (uint8_t)(DMA1_Channel1_BASE - DMA1_BASE),

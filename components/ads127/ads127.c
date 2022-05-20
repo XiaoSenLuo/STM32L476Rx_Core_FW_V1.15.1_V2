@@ -6,9 +6,7 @@
  */
 
 #include "ads127.h"
-#include <stdlib.h>
-#include <string.h>
-
+#include "ads127_driver.h"
 
 void ads127_command_reset(void){
     ads127_data_frame_t data_frame = {

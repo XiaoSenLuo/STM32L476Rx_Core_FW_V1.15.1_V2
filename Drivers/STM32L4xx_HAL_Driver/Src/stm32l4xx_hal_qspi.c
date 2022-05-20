@@ -125,7 +125,7 @@
       (#) HAL_QSPI_SetTimeout() function configures the timeout value used in the driver.
       (#) HAL_QSPI_SetFifoThreshold() function configures the threshold on the Fifo of the QSPI IP.
       (#) HAL_QSPI_GetFifoThreshold() function gives the current of the Fifo's threshold
-      (#) HAL_QSPI_SetFlashID() function configures the index of the flash memory to be accessed.
+      (#) HAL_QSPI_SetFlashID() function configures the counter of the flash memory to be accessed.
 
     *** Callback registration ***
     =============================================

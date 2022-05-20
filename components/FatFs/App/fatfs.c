@@ -30,7 +30,7 @@ char sd_root_path[4] = {'\0'};   /* SD logical drive path */
 #include "stm32l4xx_ll_rtc.h"
 /* USER CODE END Variables */
 
-FATFS sd_fatfs = {0};
+static FATFS sd_fatfs = {0};
 #if(0)
 __aligned(4) uint8_t workBuffer[FF_MAX_SS] = { 0 };
 #endif
@@ -54,7 +54,7 @@ int FATFS_SD_Init(FATFS* *fs)
         ret = f_mount(&sd_fatfs, (TCHAR const*)sd_root_path, 1);   // 立即挂载
    }
 #endif
-   *fs = &sd_fatfs;
+   if(fs) *fs = &sd_fatfs;
 	return ret;
 #endif
   /* USER CODE END Init */
@@ -148,7 +148,7 @@ int FS_FileOperations(void)
       if(ret != 0) return (uint8_t)ret;
       res = f_getfree(sd_root_path, &fre_clust, &fs);
       if(res != FR_OK) return res;
-
+      res = f_getfree(sd_root_path, &fre_clust, &fs);
       tot_sect = ((fs->n_fatent - 2) * fs->csize) >> 1 >> 10 >> 10;  // GB
       fre_sect = (fre_clust * fs->csize) >> 1 >> 10 >> 10;  // GB
       memset(wtext, 0, sizeof(wtext));

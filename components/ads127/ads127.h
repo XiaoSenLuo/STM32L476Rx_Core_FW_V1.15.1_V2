@@ -131,8 +131,6 @@ static __inline uint32_t decimal_to_complement(int32_t dec, uint8_t bits){
 #define COM_TO_DEC(complements, n)  ((complements & (0x00000001 << (n - 1))) ? (int32_t)(complements | (~((1 << n) - 1))) : (complements))
 
 
-#include "bsp_ads127.h"
-
 void ads127_command_reset(void);
 void ads127_command_start(void);
 void ads127_command_stop(void);

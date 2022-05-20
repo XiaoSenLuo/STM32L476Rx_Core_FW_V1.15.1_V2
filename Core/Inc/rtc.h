@@ -32,8 +32,6 @@
 #include "time.h"
 /* USER CODE END Includes */
 
-extern RTC_HandleTypeDef hrtc;
-
 #define TM_DATE_Pos               (32)
 #define TM_YEAR_Pos               (9)  // bit9:bit16
 #define TM_YEAR_Msk               (0xFFUL << TM_YEAR_Pos)
@@ -112,6 +110,39 @@ extern RTC_DateTypeDef rtc_date;
 
 uint8_t st_rtc_enter_initmode(void);
 uint8_t st_rtc_exit_initmode(void);
+
+typedef struct rtc_data_time_s {
+    union {
+        struct {
+            uint32_t msecond : 10;
+            uint32_t second : 6;
+            uint32_t minute : 6;
+            uint32_t hour : 5;
+        };
+        uint32_t val;
+    }time;
+    union {
+        struct {
+            uint32_t day : 5;
+            uint32_t weekday : 3;
+            uint32_t month : 4;
+            uint32_t year : 16;
+        };
+        uint32_t val;
+    }date;
+}rtc_date_time_t;
+
+typedef struct rtc_data_time_s * rtc_date_time_handle;
+
+static inline void st_rtc_time_convert(rtc_date_time_t *new_format, const struct tm *old_format){
+    new_format->time.second = old_format->tm_sec;
+    new_format->time.minute = old_format->tm_min;
+    new_format->time.hour = old_format->tm_hour;
+    new_format->date.day = old_format->tm_mday;
+    new_format->date.weekday = old_format->tm_wday;
+    new_format->date.month = old_format->tm_mon;
+    new_format->date.year = old_format->tm_year;
+}
 
 uint8_t st_rtc_set_time(struct tm* _tm);
 uint8_t st_rtc_get_time(struct tm* _tm);

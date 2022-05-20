@@ -19,6 +19,7 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
+
 #ifndef STM32L4xx_HAL_H
 #define STM32L4xx_HAL_H
 
