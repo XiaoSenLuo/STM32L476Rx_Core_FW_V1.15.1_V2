@@ -59,12 +59,25 @@
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-typedef struct isr_handle_def_s{
-	void* ctx;
-	isr_function_handle_t isr_func_handle;
-}isr_handle_def_t;
 
-static isr_handle_def_t handler[82] = {
+static isr_handle_def_t core_isr_handler[14] = {
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
+};
+
+static isr_handle_def_t peripheral_isr_handler[82] = {
 		{.ctx = NULL, .isr_func_handle = NULL},
 		{.ctx = NULL, .isr_func_handle = NULL},
 		{.ctx = NULL, .isr_func_handle = NULL},
@@ -165,22 +178,35 @@ static isr_handle_def_t gpio_exti_handler[16] = {
 		{.ctx = NULL, .isr_func_handle = NULL},
 		{.ctx = NULL, .isr_func_handle = NULL},
 		{.ctx = NULL, .isr_func_handle = NULL},
+        {.ctx = NULL, .isr_func_handle = NULL},
 };
 
+void ll_core_isr_install(IRQn_Type_t _irq_num, isr_function_handle_t fn, void *ctx){
+    if((_irq_num >= 0) || (_irq_num < -14)) return;
+    int irq_num = (int)_irq_num * -1;
+    core_isr_handler[irq_num].ctx = ctx;
+    core_isr_handler[irq_num].isr_func_handle = fn;
+}
 
+void ll_core_isr_uninstall(IRQn_Type_t _irq_num){
+    if((_irq_num >= 0) || (_irq_num < -14)) return;
+    int irq_num = (int)_irq_num * -1;
+    core_isr_handler[irq_num].ctx = NULL;
+    core_isr_handler[irq_num].isr_func_handle = NULL;
+}
 
 void ll_peripheral_isr_install(IRQn_Type_t _irq_num, isr_function_handle_t fn, void *ctx){
     if((_irq_num < 0) || (_irq_num > 81)) return;
 
-    handler[_irq_num].ctx = ctx;
-    handler[_irq_num].isr_func_handle = fn;
+    peripheral_isr_handler[_irq_num].ctx = ctx;
+    peripheral_isr_handler[_irq_num].isr_func_handle = fn;
 }
 
 void ll_peripheral_isr_uninstall(IRQn_Type_t _irq_num){
     if((_irq_num < 0) || (_irq_num > 81)) return;
 
-    handler[_irq_num].ctx = NULL;
-    handler[_irq_num].isr_func_handle = NULL;
+    peripheral_isr_handler[_irq_num].ctx = NULL;
+    peripheral_isr_handler[_irq_num].isr_func_handle = NULL;
 }
 
 int gpio_mask2num(uint32_t mask){
@@ -207,6 +233,30 @@ void ll_gpio_exti_isr_uninstall(gpio_num_t gpio){
     gpio_exti_handler[gpio].ctx = NULL;
     gpio_exti_handler[gpio].isr_func_handle = NULL;
 }
+
+static const int GPIO_IRQn[16] = {
+        EXTI0_IRQn,
+        EXTI1_IRQn,
+        EXTI2_IRQn,
+        EXTI3_IRQn,
+        EXTI4_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI9_5_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+        EXTI15_10_IRQn,
+};
+
+int gpio_get_irqn(gpio_num_t gpio_num){
+    return GPIO_IRQn[gpio_num];
+}
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -226,6 +276,7 @@ void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
   /* USER CODE END NonMaskableInt_IRQn 0 */
+
   HAL_RCC_NMI_IRQHandler();
 
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
@@ -285,6 +336,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+
    NVIC_SystemReset();
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -300,7 +352,8 @@ void UsageFault_Handler(void)
 void SVC_Handler(void)
 {
   /* USER CODE BEGIN SVCall_IRQn 0 */
-
+    if(core_isr_handler[SVCall_IRQn].isr_func_handle == NULL) return;
+    core_isr_handler[SVCall_IRQn].isr_func_handle(core_isr_handler[SVCall_IRQn].ctx);
   /* USER CODE END SVCall_IRQn 0 */
   /* USER CODE BEGIN SVCall_IRQn 1 */
 
@@ -313,7 +366,8 @@ void SVC_Handler(void)
 void DebugMon_Handler(void)
 {
   /* USER CODE BEGIN DebugMonitor_IRQn 0 */
-
+    if(core_isr_handler[DebugMonitor_IRQn].isr_func_handle == NULL) return;
+    core_isr_handler[DebugMonitor_IRQn].isr_func_handle(core_isr_handler[DebugMonitor_IRQn].ctx);
   /* USER CODE END DebugMonitor_IRQn 0 */
   /* USER CODE BEGIN DebugMonitor_IRQn 1 */
 
@@ -326,7 +380,8 @@ void DebugMon_Handler(void)
 void PendSV_Handler(void)
 {
   /* USER CODE BEGIN PendSV_IRQn 0 */
-
+    if(core_isr_handler[PendSV_IRQn].isr_func_handle == NULL) return;
+    core_isr_handler[PendSV_IRQn].isr_func_handle(core_isr_handler[PendSV_IRQn].ctx);
   /* USER CODE END PendSV_IRQn 0 */
   /* USER CODE BEGIN PendSV_IRQn 1 */
 
@@ -340,9 +395,9 @@ void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
-
   /* USER CODE END SysTick_IRQn 0 */
-
+  if(core_isr_handler[SysTick_IRQn].isr_func_handle == NULL) return;
+  core_isr_handler[SysTick_IRQn].isr_func_handle(core_isr_handler[SysTick_IRQn].ctx);
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
@@ -351,33 +406,31 @@ void SysTick_Handler(void)
 /******************************************************************************/
 /* STM32L4xx Peripheral Interrupt Handlers                                    */
 /* Add here the Interrupt Handlers for the used peripherals.                  */
-/* For the available peripheral interrupt handler names,                      */
+/* For the available peripheral interrupt peripheral_isr_handler names,                      */
 /* please refer to the startup file (startup_stm32l4xx.s).                    */
 /******************************************************************************/
 
-static const int GPIO_IRQn[16] = {
-        EXTI0_IRQn,
-        EXTI1_IRQn,
-        EXTI2_IRQn,
-        EXTI3_IRQn,
-        EXTI4_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI9_5_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-        EXTI15_10_IRQn,
-};
+void WWDG_IRQHandler(void){
 
-int gpio_get_irqn(gpio_num_t gpio_num){
-    return GPIO_IRQn[gpio_num];
 }
 
+void PVD_PVM_IRQHandler(void){
+
+}
+
+void TAMP_STAMP_IRQHandler(void){
+
+}
+
+void RTC_WKUP_IRQHandler(void){
+    if(peripheral_isr_handler[RTC_WKUP_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[RTC_WKUP_IRQn].isr_func_handle(peripheral_isr_handler[RTC_WKUP_IRQn].ctx);
+}
+
+void FLASH_IRQHandler(void){
+
+}
 
 /**
   * @brief This function handles RCC global interrupt.
@@ -388,49 +441,17 @@ void RCC_IRQHandler(void)
 
   /* USER CODE END RCC_IRQn 0 */
   /* USER CODE BEGIN RCC_IRQn 1 */
-  if(handler[RCC_IRQn].isr_func_handle == NULL) return;
+  if(peripheral_isr_handler[RCC_IRQn].isr_func_handle == NULL) return;
 
-    handler[RCC_IRQn].isr_func_handle(handler[RCC_IRQn].ctx);
+    peripheral_isr_handler[RCC_IRQn].isr_func_handle(peripheral_isr_handler[RCC_IRQn].ctx);
   /* USER CODE END RCC_IRQn 1 */
 }
 
-void RTC_Alarm_IRQHandler(void){
+void EXTI0_IRQHandler(void){
+    if((gpio_exti_handler[0].isr_func_handle == NULL) || (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_0) == RESET)) return;
 
-	if(handler[RTC_Alarm_IRQn].isr_func_handle == NULL) return;
-
-	handler[RTC_Alarm_IRQn].isr_func_handle(handler[RTC_Alarm_IRQn].ctx);
-}
-
-void RTC_WKUP_IRQHandler(void){
-	if(handler[RTC_WKUP_IRQn].isr_func_handle == NULL) return;
-
-	handler[RTC_WKUP_IRQn].isr_func_handle(handler[RTC_WKUP_IRQn].ctx);
-}
-
-void TIM1_BRK_TIM15_IRQHandler(void){
-
-}
-void TIM1_UP_TIM16_IRQHandler(void){
-
-}
-void TIM1_TRG_COM_TIM17_IRQHandler(void){
-
-}
-void TIM1_CC_IRQHandler(void){
-
-}
-
-void TIM2_IRQHandler(void)
-{
-    /* USER CODE BEGIN TIM2_IRQn 0 */
-
-    /* USER CODE END TIM2_IRQn 0 */
-
-    /* USER CODE BEGIN TIM2_IRQn 1 */
-    if(handler[TIM2_IRQn].isr_func_handle == NULL) return;
-
-    handler[TIM2_IRQn].isr_func_handle(handler[TIM2_IRQn].ctx);
-    /* USER CODE END TIM2_IRQn 1 */
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+    gpio_exti_handler[0].isr_func_handle(gpio_exti_handler[0].ctx);
 }
 
 /**
@@ -499,9 +520,9 @@ void EXTI4_IRQHandler(void)
   * @brief This function handles ADC1 and ADC2 interrupts.
   */
 void DMA1_Channel1_IRQHandler(void){
-	if(handler[DMA1_Channel1_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel1_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel1_IRQn].isr_func_handle(handler[DMA1_Channel1_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel1_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel1_IRQn].ctx);
 }
 
 
@@ -512,9 +533,9 @@ void DMA1_Channel2_IRQHandler(void){
   /* USER CODE END DMA1_Channel2_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel2_IRQn 1 */
-	if(handler[DMA1_Channel2_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel2_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel2_IRQn].isr_func_handle(handler[DMA1_Channel2_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel2_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel2_IRQn].ctx);
   /* USER CODE END DMA1_Channel2_IRQn 1 */
 }
 
@@ -527,9 +548,9 @@ void DMA1_Channel3_IRQHandler(void){
   /* USER CODE END DMA1_Channel3_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel3_IRQn 1 */
-	if(handler[DMA1_Channel3_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel3_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel3_IRQn].isr_func_handle(handler[DMA1_Channel3_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel3_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel3_IRQn].ctx);
   /* USER CODE END DMA1_Channel3_IRQn 1 */
 }
 
@@ -542,9 +563,9 @@ void DMA1_Channel4_IRQHandler(void){
   /* USER CODE END DMA1_Channel4_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
-	if(handler[DMA1_Channel4_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel4_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel4_IRQn].isr_func_handle(handler[DMA1_Channel4_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel4_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel4_IRQn].ctx);
   /* USER CODE END DMA1_Channel4_IRQn 1 */
 }
 
@@ -557,9 +578,9 @@ void DMA1_Channel5_IRQHandler(void){
   /* USER CODE END DMA1_Channel5_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel5_IRQn 1 */
-	if(handler[DMA1_Channel5_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel5_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel5_IRQn].isr_func_handle(handler[DMA1_Channel5_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel5_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel5_IRQn].ctx);
   /* USER CODE END DMA1_Channel5_IRQn 1 */
 }
 
@@ -572,9 +593,9 @@ void DMA1_Channel6_IRQHandler(void){
   /* USER CODE END DMA1_Channel6_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
-	if(handler[DMA1_Channel6_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel6_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel6_IRQn].isr_func_handle(handler[DMA1_Channel6_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel6_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel6_IRQn].ctx);
   /* USER CODE END DMA1_Channel6_IRQn 1 */
 }
 
@@ -587,9 +608,9 @@ void DMA1_Channel7_IRQHandler(void){
   /* USER CODE END DMA1_Channel7_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel7_IRQn 1 */
-	if(handler[DMA1_Channel7_IRQn].isr_func_handle == NULL) return;
+	if(peripheral_isr_handler[DMA1_Channel7_IRQn].isr_func_handle == NULL) return;
 
-	handler[DMA1_Channel7_IRQn].isr_func_handle(handler[DMA1_Channel7_IRQn].ctx);
+	peripheral_isr_handler[DMA1_Channel7_IRQn].isr_func_handle(peripheral_isr_handler[DMA1_Channel7_IRQn].ctx);
   /* USER CODE END DMA1_Channel7_IRQn 1 */
 }
 
@@ -602,12 +623,28 @@ void ADC1_2_IRQHandler(void){
   /* USER CODE END ADC1_2_IRQn 0 */
 
   /* USER CODE BEGIN ADC1_2_IRQn 1 */
-    if(handler[ADC1_2_IRQn].isr_func_handle == NULL) return;
+    if(peripheral_isr_handler[ADC1_2_IRQn].isr_func_handle == NULL) return;
 
-    handler[ADC1_2_IRQn].isr_func_handle(handler[ADC1_2_IRQn].ctx);
+    peripheral_isr_handler[ADC1_2_IRQn].isr_func_handle(peripheral_isr_handler[ADC1_2_IRQn].ctx);
   /* USER CODE END ADC1_2_IRQn 1 */
 }
 
+void CAN1_TX_IRQhandler(void){
+
+}
+
+void CAN1_RX0_IRQHandler(void){
+
+
+}
+
+void CAN1_RX1_IRQHandler(void){
+
+}
+
+void CAN1_SCE_IRQHandler(void){
+
+}
 
 /**
   * @brief This function handles EXTI line[9:5] interrupts.
@@ -649,6 +686,70 @@ void EXTI9_5_IRQHandler(void){
   /* USER CODE END EXTI9_5_IRQn 1 */
 }
 
+void TIM1_BRK_TIM15_IRQHandler(void){
+
+}
+void TIM1_UP_TIM16_IRQHandler(void){
+
+}
+void TIM1_TRG_COM_TIM17_IRQHandler(void){
+
+}
+void TIM1_CC_IRQHandler(void){
+
+}
+
+void TIM2_IRQHandler(void)
+{
+    /* USER CODE BEGIN TIM2_IRQn 0 */
+
+    /* USER CODE END TIM2_IRQn 0 */
+
+    /* USER CODE BEGIN TIM2_IRQn 1 */
+    if(peripheral_isr_handler[TIM2_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM2_IRQn].isr_func_handle(peripheral_isr_handler[TIM2_IRQn].ctx);
+    /* USER CODE END TIM2_IRQn 1 */
+}
+
+
+void TIM3_IRQHandler(void){
+    if(peripheral_isr_handler[TIM3_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM3_IRQn].isr_func_handle(peripheral_isr_handler[TIM3_IRQn].ctx);
+}
+
+
+void TIM4_IRQHandler(void){
+    if(peripheral_isr_handler[TIM4_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM4_IRQn].isr_func_handle(peripheral_isr_handler[TIM4_IRQn].ctx);
+}
+
+void I2C1_EV_IRQHandler(void){
+    if(peripheral_isr_handler[I2C1_EV_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[I2C1_EV_IRQn].isr_func_handle(peripheral_isr_handler[I2C1_EV_IRQn].ctx);
+}
+
+void I2C1_ER_IRQHandler(void){
+    if(peripheral_isr_handler[I2C1_ER_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[I2C1_ER_IRQn].isr_func_handle(peripheral_isr_handler[I2C1_ER_IRQn].ctx);
+}
+
+void I2C2_EV_IRQHandler(void){
+    if(peripheral_isr_handler[I2C2_EV_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[I2C2_EV_IRQn].isr_func_handle(peripheral_isr_handler[I2C2_EV_IRQn].ctx);
+}
+
+void I2C2_ER_IRQHandler(void){
+    if(peripheral_isr_handler[I2C2_ER_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[I2C2_ER_IRQn].isr_func_handle(peripheral_isr_handler[I2C2_ER_IRQn].ctx);
+}
+
 /**
   * @brief This function handles SPI1 global interrupt.
   */
@@ -659,9 +760,36 @@ void SPI1_IRQHandler(void)
   /* USER CODE END SPI1_IRQn 0 */
 
   /* USER CODE BEGIN SPI1_IRQn 1 */
-    if(handler[SPI1_IRQn].isr_func_handle == NULL) return;
-    handler[SPI1_IRQn].isr_func_handle(handler[SPI1_IRQn].ctx);
+    if(peripheral_isr_handler[SPI1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SPI1_IRQn].isr_func_handle(peripheral_isr_handler[SPI1_IRQn].ctx);
   /* USER CODE END SPI1_IRQn 1 */
+}
+
+void SPI2_IRQHandler(void)
+{
+    /* USER CODE BEGIN SPI1_IRQn 0 */
+
+    /* USER CODE END SPI1_IRQn 0 */
+
+    /* USER CODE BEGIN SPI1_IRQn 1 */
+    if(peripheral_isr_handler[SPI2_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SPI2_IRQn].isr_func_handle(peripheral_isr_handler[SPI2_IRQn].ctx);
+    /* USER CODE END SPI1_IRQn 1 */
+}
+
+void USART1_IRQHandler(void){
+    if(peripheral_isr_handler[USART1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[USART1_IRQn].isr_func_handle(peripheral_isr_handler[USART1_IRQn].ctx);
+}
+
+void USART2_IRQHandler(void){
+    if(peripheral_isr_handler[USART2_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[USART2_IRQn].isr_func_handle(peripheral_isr_handler[USART2_IRQn].ctx);
+}
+
+void USART3_IRQHandler(void){
+    if(peripheral_isr_handler[USART3_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[USART3_IRQn].isr_func_handle(peripheral_isr_handler[USART3_IRQn].ctx);
 }
 
 /**
@@ -707,6 +835,55 @@ void EXTI15_10_IRQHandler(void){
   /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
+void RTC_Alarm_IRQHandler(void){
+
+    if(peripheral_isr_handler[RTC_Alarm_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[RTC_Alarm_IRQn].isr_func_handle(peripheral_isr_handler[RTC_Alarm_IRQn].ctx);
+}
+
+void DFSDM1_FLT3_IRQHandler(void){
+    if(peripheral_isr_handler[DFSDM1_FLT3_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[DFSDM1_FLT3_IRQn].isr_func_handle(peripheral_isr_handler[DFSDM1_FLT3_IRQn].ctx);
+}
+
+void TIM8_BRK_IRQHandler(void){
+    if(peripheral_isr_handler[TIM8_BRK_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM8_BRK_IRQn].isr_func_handle(peripheral_isr_handler[TIM8_BRK_IRQn].ctx);
+}
+
+void TIM8_UP_IRQHandler(void){
+    if(peripheral_isr_handler[TIM8_UP_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM8_UP_IRQn].isr_func_handle(peripheral_isr_handler[TIM8_UP_IRQn].ctx);
+}
+
+void TIM8_TRG_COM_IRQHandler(void){
+    if(peripheral_isr_handler[TIM8_TRG_COM_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM8_TRG_COM_IRQn].isr_func_handle(peripheral_isr_handler[TIM8_TRG_COM_IRQn].ctx);
+}
+
+void TIM8_CC_IRQHandler(void){
+    if(peripheral_isr_handler[TIM8_CC_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[TIM8_CC_IRQn].isr_func_handle(peripheral_isr_handler[TIM8_CC_IRQn].ctx);
+}
+
+void ADC3_IRQHandler(void){
+    if(peripheral_isr_handler[ADC3_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[ADC3_IRQn].isr_func_handle(peripheral_isr_handler[ADC3_IRQn].ctx);
+}
+
+void FMC_IRQHandler(void){
+    if(peripheral_isr_handler[FMC_IRQn].isr_func_handle == NULL) return;
+
+    peripheral_isr_handler[FMC_IRQn].isr_func_handle(peripheral_isr_handler[FMC_IRQn].ctx);
+}
+
 /**
   * @brief This function handles SDMMC1 global interrupt.
   */
@@ -716,28 +893,63 @@ void SDMMC1_IRQHandler(void)
 
   /* USER CODE END SDMMC1_IRQn 0 */
   /* USER CODE BEGIN SDMMC1_IRQn 1 */
-    if(handler[SDMMC1_IRQn].isr_func_handle == NULL) return;
-    handler[SDMMC1_IRQn].isr_func_handle(handler[SDMMC1_IRQn].ctx);
+    if(peripheral_isr_handler[SDMMC1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SDMMC1_IRQn].isr_func_handle(peripheral_isr_handler[SDMMC1_IRQn].ctx);
   /* USER CODE END SDMMC1_IRQn 1 */
 }
 
-///**
-//  * @brief This function handles UART4 global interrupt.
-//  */
+void TIM5_IRQHandler(void){
+    if(peripheral_isr_handler[TIM5_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[TIM5_IRQn].isr_func_handle(peripheral_isr_handler[TIM5_IRQn].ctx);
+}
+
+void SPI3_IRQHandler(void){
+    if(peripheral_isr_handler[SPI3_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SPI3_IRQn].isr_func_handle(peripheral_isr_handler[SPI3_IRQn].ctx);
+}
+
+/**
+  * @brief This function handles UART4 global interrupt.
+  */
 void UART4_IRQHandler(void)
 {
   /* USER CODE BEGIN UART4_IRQn 0 */
 
   /* USER CODE END UART4_IRQn 0 */
   /* USER CODE BEGIN UART4_IRQn 1 */
-    if(handler[UART4_IRQn].isr_func_handle == NULL) return;
-    handler[UART4_IRQn].isr_func_handle(handler[UART4_IRQn].ctx);
+    if(peripheral_isr_handler[UART4_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[UART4_IRQn].isr_func_handle(peripheral_isr_handler[UART4_IRQn].ctx);
   /* USER CODE END UART4_IRQn 1 */
 }
 
+void UART5_IRQHandler(void){
+    if(peripheral_isr_handler[UART5_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[UART5_IRQn].isr_func_handle(peripheral_isr_handler[UART5_IRQn].ctx);
+}
+
+void TIM6_DAC_IRQHandler(void){
+    if(peripheral_isr_handler[TIM6_DAC_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[TIM6_DAC_IRQn].isr_func_handle(peripheral_isr_handler[TIM6_DAC_IRQn].ctx);
+}
+
+void TIM7_IRQHandler(void){
+    if(peripheral_isr_handler[TIM7_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[TIM7_IRQn].isr_func_handle(peripheral_isr_handler[TIM7_IRQn].ctx);
+}
+
+void DMA2_Channel1_IRQHandler(void){
+    if(peripheral_isr_handler[DMA2_Channel1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel1_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel1_IRQn].ctx);
+}
+
+void DMA2_Channel2_IRQHandler(void){
+    if(peripheral_isr_handler[DMA2_Channel2_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel2_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel2_IRQn].ctx);
+}
+
 void DMA2_Channel3_IRQHandler(void){
-    if(handler[DMA2_Channel3_IRQn].isr_func_handle == NULL) return;
-    handler[DMA2_Channel3_IRQn].isr_func_handle(handler[DMA2_Channel3_IRQn].ctx);
+    if(peripheral_isr_handler[DMA2_Channel3_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel3_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel3_IRQn].ctx);
 }
 
 /**
@@ -750,8 +962,8 @@ void DMA2_Channel4_IRQHandler(void)
   /* USER CODE END DMA2_Channel4_IRQn 0 */
 
   /* USER CODE BEGIN DMA2_Channel4_IRQn 1 */
-    if(handler[DMA2_Channel4_IRQn].isr_func_handle == NULL) return;
-    handler[DMA2_Channel4_IRQn].isr_func_handle(handler[DMA2_Channel4_IRQn].ctx);
+    if(peripheral_isr_handler[DMA2_Channel4_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel4_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel4_IRQn].ctx);
   /* USER CODE END DMA2_Channel4_IRQn 1 */
 }
 
@@ -765,9 +977,29 @@ void DMA2_Channel5_IRQHandler(void)
   /* USER CODE END DMA2_Channel5_IRQn 0 */
 
   /* USER CODE BEGIN DMA2_Channel5_IRQn 1 */
-    if(handler[DMA2_Channel5_IRQn].isr_func_handle == NULL) return;
-    handler[DMA2_Channel5_IRQn].isr_func_handle(handler[DMA2_Channel5_IRQn].ctx);
+    if(peripheral_isr_handler[DMA2_Channel5_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel5_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel5_IRQn].ctx);
   /* USER CODE END DMA2_Channel5_IRQn 1 */
+}
+
+void DFSDM1_FLT0_IRQHandler(void){
+    if(peripheral_isr_handler[DFSDM1_FLT0_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DFSDM1_FLT0_IRQn].isr_func_handle(peripheral_isr_handler[DFSDM1_FLT0_IRQn].ctx);
+}
+
+void DFSDM1_FLT1_IRQHandler(void){
+    if(peripheral_isr_handler[DFSDM1_FLT1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DFSDM1_FLT1_IRQn].isr_func_handle(peripheral_isr_handler[DFSDM1_FLT1_IRQn].ctx);
+}
+
+void DFSDM1_FLT2_IRQHandler(void){
+    if(peripheral_isr_handler[DFSDM1_FLT2_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DFSDM1_FLT2_IRQn].isr_func_handle(peripheral_isr_handler[DFSDM1_FLT2_IRQn].ctx);
+}
+
+void COMP_IRQHandler(void){
+    if(peripheral_isr_handler[COMP_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[COMP_IRQn].isr_func_handle(peripheral_isr_handler[COMP_IRQn].ctx);
 }
 
 void LPTIM1_IRQHandler(void)
@@ -777,8 +1009,8 @@ void LPTIM1_IRQHandler(void)
   /* USER CODE END LPTIM1_IRQn 0 */
 
   /* USER CODE BEGIN LPTIM1_IRQn 1 */
-    if(handler[LPTIM1_IRQn].isr_func_handle == NULL) return;
-    handler[LPTIM1_IRQn].isr_func_handle(handler[LPTIM1_IRQn].ctx);
+    if(peripheral_isr_handler[LPTIM1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[LPTIM1_IRQn].isr_func_handle(peripheral_isr_handler[LPTIM1_IRQn].ctx);
   /* USER CODE END LPTIM1_IRQn 1 */
 }
 
@@ -792,25 +1024,12 @@ void LPTIM2_IRQHandler(void)
   /* USER CODE END LPTIM2_IRQn 0 */
 
   /* USER CODE BEGIN LPTIM2_IRQn 1 */
-    if(handler[LPTIM2_IRQn].isr_func_handle == NULL) return;
-    handler[LPTIM2_IRQn].isr_func_handle(handler[LPTIM2_IRQn].ctx);
+    if(peripheral_isr_handler[LPTIM2_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[LPTIM2_IRQn].isr_func_handle(peripheral_isr_handler[LPTIM2_IRQn].ctx);
   /* USER CODE END LPTIM2_IRQn 1 */
 }
 
 
-/**
-  * @brief This function handles FPU global interrupt.
-  */
-void FPU_IRQHandler(void)
-{
-  /* USER CODE BEGIN FPU_IRQn 0 */
-
-  /* USER CODE END FPU_IRQn 0 */
-  /* USER CODE BEGIN FPU_IRQn 1 */
-    if(handler[FPU_IRQn].isr_func_handle == NULL) return;
-    handler[FPU_IRQn].isr_func_handle(handler[FPU_IRQn].ctx);
-  /* USER CODE END FPU_IRQn 1 */
-}
 
 /* USER CODE BEGIN 1 */
 
@@ -821,11 +1040,98 @@ void FPU_IRQHandler(void)
   */
 void OTG_FS_IRQHandler(void)
 {
-    if(handler[OTG_FS_IRQn].isr_func_handle == NULL) return;
-    handler[OTG_FS_IRQn].isr_func_handle(handler[OTG_FS_IRQn].ctx);
+    if(peripheral_isr_handler[OTG_FS_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[OTG_FS_IRQn].isr_func_handle(peripheral_isr_handler[OTG_FS_IRQn].ctx);
+}
+
+void DMA2_Channel6_IRQHandler(void)
+{
+    /* USER CODE BEGIN DMA2_Channel5_IRQn 0 */
+
+    /* USER CODE END DMA2_Channel5_IRQn 0 */
+
+    /* USER CODE BEGIN DMA2_Channel5_IRQn 1 */
+    if(peripheral_isr_handler[DMA2_Channel6_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel6_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel6_IRQn].ctx);
+    /* USER CODE END DMA2_Channel5_IRQn 1 */
+}
+
+void DMA2_Channel7_IRQHandler(void)
+{
+    /* USER CODE BEGIN DMA2_Channel5_IRQn 0 */
+
+    /* USER CODE END DMA2_Channel5_IRQn 0 */
+
+    /* USER CODE BEGIN DMA2_Channel5_IRQn 1 */
+    if(peripheral_isr_handler[DMA2_Channel7_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[DMA2_Channel7_IRQn].isr_func_handle(peripheral_isr_handler[DMA2_Channel7_IRQn].ctx);
+    /* USER CODE END DMA2_Channel5_IRQn 1 */
 }
 
 
+void LPUART1_IRQHandler(void){
+    if(peripheral_isr_handler[LPUART1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[LPUART1_IRQn].isr_func_handle(peripheral_isr_handler[LPUART1_IRQn].ctx);
+}
+
+void QUADSPI_IRQHandler(void){
+    if(peripheral_isr_handler[QUADSPI_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[QUADSPI_IRQn].isr_func_handle(peripheral_isr_handler[QUADSPI_IRQn].ctx);
+}
+
+void I2C3_EV_IRQHandler(void){
+    if(peripheral_isr_handler[I2C3_EV_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[I2C3_EV_IRQn].isr_func_handle(peripheral_isr_handler[I2C3_EV_IRQn].ctx);
+}
+
+void I2C3_ER_IRQHandler(void){
+    if(peripheral_isr_handler[I2C3_ER_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[I2C3_ER_IRQn].isr_func_handle(peripheral_isr_handler[I2C3_ER_IRQn].ctx);
+}
+
+void SAI1_IRQHandler(void){
+    if(peripheral_isr_handler[SAI1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SAI1_IRQn].isr_func_handle(peripheral_isr_handler[SAI1_IRQn].ctx);
+}
+
+void SAI2_IRQHandler(void){
+    if(peripheral_isr_handler[SAI2_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SAI2_IRQn].isr_func_handle(peripheral_isr_handler[SAI2_IRQn].ctx);
+}
+
+void SWPMI1_IRQHandler(void){
+    if(peripheral_isr_handler[SWPMI1_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[SWPMI1_IRQn].isr_func_handle(peripheral_isr_handler[SWPMI1_IRQn].ctx);
+}
+
+void TSC_IRQHandler(void){
+    if(peripheral_isr_handler[TSC_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[TSC_IRQn].isr_func_handle(peripheral_isr_handler[TSC_IRQn].ctx);
+}
+
+void LCD_IRQHandler(void){
+    if(peripheral_isr_handler[LCD_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[LCD_IRQn].isr_func_handle(peripheral_isr_handler[LCD_IRQn].ctx);
+}
+
+void RNG_IRQHandler(void){
+    if(peripheral_isr_handler[RNG_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[RNG_IRQn].isr_func_handle(peripheral_isr_handler[RNG_IRQn].ctx);
+}
+
+/**
+  * @brief This function handles FPU global interrupt.
+  */
+void FPU_IRQHandler(void)
+{
+    /* USER CODE BEGIN FPU_IRQn 0 */
+
+    /* USER CODE END FPU_IRQn 0 */
+    /* USER CODE BEGIN FPU_IRQn 1 */
+    if(peripheral_isr_handler[FPU_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[FPU_IRQn].isr_func_handle(peripheral_isr_handler[FPU_IRQn].ctx);
+    /* USER CODE END FPU_IRQn 1 */
+}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
