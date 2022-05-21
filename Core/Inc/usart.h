@@ -34,53 +34,25 @@
 
 int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
 
-int usart1_start_receive(UART_HandleTypeDef *uart_handle);
+int usart1_deinitialize(UART_HandleTypeDef* uart_handle);
 
-#if(0)
-extern UART_HandleTypeDef huart4;
-extern UART_HandleTypeDef huart1;
+uint16_t usart1_start_receive(UART_HandleTypeDef *uart_handle);
 
-/* USER CODE BEGIN Private defines */
-#define HAL_UART             0
-#define UART3_USE_DMA        1
-#define UART4_USE_DMA        1
-/* USER CODE END Private defines */
+void usart1_stop_receive(UART_HandleTypeDef *uart_handle);
 
-//void MX_UART4_Init(void);
-//void MX_USART1_UART_Init(void);
+uint16_t usart1_write_bytes(UART_HandleTypeDef *uart_handle, const void* data, uint16_t length, uint32_t timeout);
 
-/* USER CODE BEGIN Prototypes */
+uint16_t usart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t length, uint32_t timeout);
 
-void USART1_IRQHandler(void);
-void UART4_IRQHandler(void);
-void USART3_IRQHandler(void);
+int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
 
-void uart_init(USART_TypeDef * in_uart, uint32_t _baurate);
-void uart_deinit(USART_TypeDef * in_uart);
+int lpuart1_deinitialize(UART_HandleTypeDef* uart_handle);
 
-void uart3_dma_txcplt_callback(void);
-void uart3_dma_rxcplt_callback(void);
-void uart3_busy_callbcak(void);
+uint16_t lpuart1_start_receive(UART_HandleTypeDef *uart_handle);
 
-void uart3_cmd_rx_callback(void);
+void lpuart1_stop_receive(UART_HandleTypeDef *uart_handle);
 
-uint8_t UART1_Write(uint8_t* ptr, uint16_t s);
-uint8_t UART1_Read(uint8_t* ptr, uint16_t s);
-
-uint8_t UART3_Write(uint8_t* ptr, uint16_t s);
-bool UART3_Wait_For_TC(void);
-uint8_t UART3_Read(uint8_t* ptr, uint16_t s);
-
-uint8_t UART4_Write(uint8_t* ptr, uint16_t s);
-uint8_t UART4_Read(uint8_t* ptr, uint16_t s);
-
-void cmd_uart_init(uint32_t _baurate);
-void cmd_uart_deinit(void);
-
-bool cmd_sentence_is_ready(void);
-uint8_t cmd_get_sentence(uint8_t *buf, uint16_t s);
-#endif
-
+uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t length, uint32_t timeout);
 
 /* USER CODE END Prototypes */
 
