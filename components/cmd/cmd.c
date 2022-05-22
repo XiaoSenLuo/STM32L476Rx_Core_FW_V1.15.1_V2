@@ -12,6 +12,9 @@
 #include "stdio.h"
 
 #include "cmd.h"
+
+#if(0)
+
 #include "rtc.h"
 #include "usart.h"
 #include "config_ini.h"
@@ -162,3 +165,6 @@ void printf_help(void){
 		  UART3_Write((uint8_t*)_help_file[i], _line_size);
 	  }
 }
+
+
+#endif

@@ -19,46 +19,20 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "rtc.h"
+#include "stm32l4xx_hal.h"
 #include "stm32l4xx_ll_rcc.h"
 #include "stm32l4xx_ll_pwr.h"
+#include "stm32l4xx_ll_rtc.h"
+
 /* USER CODE BEGIN 0 */
-
-RTC_TimeTypeDef rtc_time;
-RTC_DateTypeDef rtc_date;
-
 
 static uint8_t rtc_waitfor_synchro(void);
 
-
 /* USER CODE END 0 */
 
-//RTC_HandleTypeDef hrtc;
+static RTC_HandleTypeDef hrtc = { 0 };
 
 /* RTC init function */
-void MX_RTC_Init(void){
-
-#if defined(USE_FULL_LL_DRIVER)
-
-	LL_RCC_SetRTCClockSource(LL_RCC_RTC_CLKSOURCE_LSE);
-	LL_RCC_EnableRTC();
-	LL_RTC_DisableWriteProtection(RTC);
-	LL_RTC_TS_EnableInternalEvent(RTC);            // 当VCC掉电, 切换到Vbat供电备份时间戳
-	LL_RTC_EnableInitMode(RTC);
-	while (LL_RTC_IsActiveFlag_INIT(RTC) != 1){};
-
-	LL_RTC_SetHourFormat(RTC, LL_RTC_HOURFORMAT_24HOUR);
-	/* Set Asynch Prediv (value according to source clock) */
-	LL_RTC_SetAsynchPrescaler(RTC, ((uint32_t)0x7F));
-	/* Set Synch Prediv (value according to source clock) */
-	LL_RTC_SetSynchPrescaler(RTC, ((uint32_t)0x00FF));
-
-    st_rtc_exit_initmode();
-
-	LL_RTC_EnableWriteProtection(RTC);
-
-#endif
-
-}
 
 /* USER CODE BEGIN 1 */
 
@@ -87,6 +61,37 @@ static uint8_t rtc_waitfor_synchro(void){
 	while((_timeout) && (LL_RTC_IsActiveFlag_RS(RTC) != 1)){ _timeout -= 1;};
 	if((!_timeout) && (LL_RTC_IsActiveFlag_RS(RTC) != 1)) return 1;
 	else return 0;
+}
+
+int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
+    int err = 0;
+    RCC_OscInitTypeDef        RCC_OscInitStruct = { 0 };
+    RCC_PeriphCLKInitTypeDef  PeriphClkInitStruct = { 0 };
+
+    __HAL_RCC_PWR_CLK_ENABLE();
+    HAL_PWR_EnableBkUpAccess();
+
+    RCC_OscInitStruct.OscillatorType =  RCC_OSCILLATORTYPE_LSE;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+    RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+    HAL_RCC_OscConfig(&RCC_OscInitStruct);
+
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
+    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
+
+    hrtc.Instance = RTC;
+    hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+    hrtc.Init.AsynchPrediv = 0x7F; /* LSE as RTC clock */
+    hrtc.Init.SynchPrediv = 0x00FF; /* LSE as RTC clock */
+    hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+    hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+    hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+
+    err = HAL_RTC_Init(&hrtc);
+    if(hrtc_handle) *hrtc_handle = &hrtc;
+
+    return err;
 }
 
 uint8_t st_rtc_set_time(struct tm* _tm){
@@ -121,8 +126,13 @@ uint8_t st_rtc_set_time(struct tm* _tm){
     return res;
 }
 
+
+
+#include "stdio.h"
+
 uint8_t st_rtc_get_time(struct tm* _tm){
     if(_tm == NULL) return 1;
+
 	_tm->tm_sec = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetSecond(RTC));
 	_tm->tm_hour = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetHour(RTC));
 	_tm->tm_min = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_TIME_GetMinute(RTC));
@@ -130,7 +140,32 @@ uint8_t st_rtc_get_time(struct tm* _tm){
 	_tm->tm_mon = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetMonth(RTC));
 	_tm->tm_wday = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetWeekDay(RTC));
 	_tm->tm_year = __LL_RTC_CONVERT_BCD2BIN(LL_RTC_DATE_GetYear(RTC)) + 2000 - 1900;
+
 	return 0;
+}
+
+
+uint8_t st_rtc_get_time_v2(rtc_date_time_t* time){
+    if(time == NULL) return 1;
+    uint32_t bcd_time = 0, bcd_date = 0;
+    u32_st_rtc_time_bcd_format_handle bcd_time_handle = NULL;
+    u32_st_rtc_date_bcd_format_handle bcd_date_handle = NULL;
+
+    bcd_time = READ_REG(RTC->TR);
+    bcd_date = READ_REG(RTC->DR);
+    bcd_time_handle = (u32_st_rtc_time_bcd_format_handle)&bcd_time;
+    bcd_date_handle = (u32_st_rtc_date_bcd_format_handle)&bcd_date;
+
+    time->time.second = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->sec);
+    time->time.minute = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->min);
+    time->time.hour = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->hour);
+    time->time.pm = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->pm);
+    time->date.day = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->day);
+    time->date.weekday = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->wdu);
+    time->date.month = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->mon);
+    time->date.year = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->year);
+
+    return 0;
 }
 
 uint32_t st_rtc_get_subsecond(void){

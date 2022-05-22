@@ -13,7 +13,7 @@
 #include "stdarg.h"
 #include "stdbool.h"
 
-
+#if(0)
 void cmd_log_init(uint32_t baud);
 uint8_t cmd_write(uint8_t* data, uint16_t len);
 uint8_t cmd_printf(const char* fmt, ...);
@@ -27,5 +27,6 @@ bool cmd_parse_get(const char* sentence);
 
 void printf_help(void);
 
+#endif
 
 #endif /* CMD_CMD_H_ */

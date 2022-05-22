@@ -15,7 +15,7 @@
 
 #include "minmea/minmea.h"
 
-
+#if(0)
 #ifndef ATGM336H
 #define ATGM336H                       1
 #endif
@@ -132,5 +132,5 @@ int gps_uart_get_sentence(uint8_t *ptr, uint16_t s);
 #else
 #error "GPS ERROR"
 #endif
-
+#endif
 #endif /* GPS_H_ */

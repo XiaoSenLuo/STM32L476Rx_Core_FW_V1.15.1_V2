@@ -27,7 +27,7 @@
 
 
 /* USER CODE BEGIN Includes */
-#include "stm32l4xx_ll_rtc.h"
+
 #include "stm32l4xx_ll_exti.h"
 #include "time.h"
 /* USER CODE END Includes */
@@ -101,12 +101,8 @@ static inline uint64_t tm_get_date_time(struct tm _tm){
 #define RTC_ALARM_EXTI_LINE         LL_EXTI_LINE_18
 /* USER CODE END Private defines */
 
-void MX_RTC_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
-extern RTC_TimeTypeDef rtc_time;
-extern RTC_DateTypeDef rtc_date;
 
 uint8_t st_rtc_enter_initmode(void);
 uint8_t st_rtc_exit_initmode(void);
@@ -118,6 +114,7 @@ typedef struct rtc_data_time_s {
             uint32_t second : 6;
             uint32_t minute : 6;
             uint32_t hour : 5;
+            uint32_t pm : 1;
         };
         uint32_t val;
     }time;
@@ -134,6 +131,32 @@ typedef struct rtc_data_time_s {
 
 typedef struct rtc_data_time_s * rtc_date_time_handle;
 
+typedef union u32_st_rtc_time_bcd_format_s{
+    struct{
+        uint32_t sec : 7;
+        uint32_t bit7 : 1;
+        uint32_t min : 7;
+        uint32_t bit15 : 1;
+        uint32_t hour : 6;
+        uint32_t pm : 1;
+    };
+    uint32_t val;
+}u32_st_rtc_time_bcd_format_t;
+typedef u32_st_rtc_time_bcd_format_t * u32_st_rtc_time_bcd_format_handle;
+
+typedef union u32_st_rtc_date_bcd_format_s{
+    struct{
+        uint32_t day : 6;
+        uint32_t bit6_7 : 2;
+        uint32_t mon : 5;
+        uint32_t wdu : 3;
+        uint32_t year : 8;
+    };
+    uint32_t val;
+}u32_st_rtc_date_bcd_format_t;
+typedef u32_st_rtc_date_bcd_format_t * u32_st_rtc_date_bcd_format_handle;
+
+
 static inline void st_rtc_time_convert(rtc_date_time_t *new_format, const struct tm *old_format){
     new_format->time.second = old_format->tm_sec;
     new_format->time.minute = old_format->tm_min;
@@ -146,6 +169,8 @@ static inline void st_rtc_time_convert(rtc_date_time_t *new_format, const struct
 
 uint8_t st_rtc_set_time(struct tm* _tm);
 uint8_t st_rtc_get_time(struct tm* _tm);
+
+uint8_t st_rtc_get_time_v2(rtc_date_time_t* time);
 
 uint32_t st_rtc_get_subsecond(void);
 
@@ -173,6 +198,10 @@ uint8_t st_rtc_config_wkup_stop(void);
  * @return
  */
 uint8_t st_rtc_config_timeout(uint16_t in_timeout);
+
+typedef RTC_HandleTypeDef * RTC_HandleTypeDef_Handle;
+
+int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle);
 
 
 /* USER CODE END Prototypes */

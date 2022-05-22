@@ -35,7 +35,6 @@ typedef struct sys_config_s{
         uint32_t file_limit;
     }sd;
     struct{
-//        ads127_dev_t dev;
         struct{
         	uint32_t conver_rate;
         	uint32_t start_time;
@@ -48,14 +47,26 @@ typedef struct sys_config_s{
         		uint32_t val;
         	}file;
         }ctrl;
+        uint32_t ofc;
+        uint32_t fsc;
     }ads;
     struct{
-        void* v;
+        uint32_t baudrate;
     }gps;
     struct{
-        void* v;
+
     }rtc;
 }sys_config_t;
 
+
+typedef union {
+    struct {
+        uint32_t usb2uart : 1;
+        uint32_t gps_pps : 4;
+        uint32_t sd_cd : 1;
+        uint32_t usb_dec : 1;
+    };
+    uint32_t val;
+}system_state_t;
 
 #endif /* INC_SYSTEM_TYPEDEF_H_ */

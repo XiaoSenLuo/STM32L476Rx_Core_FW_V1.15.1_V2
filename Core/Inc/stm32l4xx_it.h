@@ -158,6 +158,7 @@ void ll_peripheral_isr_install(IRQn_Type_t _irq_num, isr_function_handle_t fn, v
 void ll_peripheral_isr_uninstall(IRQn_Type_t _irq_num);
 
 typedef enum{
+    NOGPIO = -1,
     GPIO0 = 0,
     GPIO1 = 1,
     GPIO2 = 2,

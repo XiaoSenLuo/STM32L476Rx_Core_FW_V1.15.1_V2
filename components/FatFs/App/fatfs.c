@@ -60,6 +60,8 @@ int FATFS_SD_Init(FATFS* *fs)
   /* USER CODE END Init */
 }
 
+#include "rtc.h"
+
 /**
   * @brief  Gets Time from RTC
   * @param  None
@@ -70,7 +72,7 @@ DWORD get_fattime(void)
   /* USER CODE BEGIN get_fattime */
 
 	DWORD ret = 0;
-
+#if(0)
 	LL_RTC_TimeTypeDef ll_rtc_time = { .TimeFormat = LL_RTC_HOURFORMAT_24HOUR };
 	LL_RTC_DateTypeDef ll_rtc_date = { 0 };
 
@@ -86,6 +88,29 @@ DWORD get_fattime(void)
 	ret = ((DWORD)((ll_rtc_date.Year + 2000) - 1980) << 25) | ((DWORD)ll_rtc_date.Month << 21) | ((DWORD)ll_rtc_date.Day << 16)
 	      | ((DWORD)ll_rtc_time.Hours << 11) | ((DWORD)ll_rtc_time.Minutes << 5) | (ll_rtc_time.Seconds >> 1);
 	return ret;
+#else
+    rtc_date_time_t date_time = { 0 };
+
+    uint32_t bcd_time = 0, bcd_date = 0;
+    u32_st_rtc_time_bcd_format_handle bcd_time_handle = NULL;
+    u32_st_rtc_date_bcd_format_handle bcd_date_handle = NULL;
+
+    bcd_time = READ_REG(RTC->TR);
+    bcd_date = READ_REG(RTC->DR);
+    bcd_time_handle = (u32_st_rtc_time_bcd_format_handle)&bcd_time;
+    bcd_date_handle = (u32_st_rtc_date_bcd_format_handle)&bcd_date;
+
+    date_time.time.second = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->sec);
+    date_time.time.minute = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->min);
+    date_time.time.hour = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->hour);
+    date_time.date.day = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->day);
+    date_time.date.month = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->mon);
+    date_time.date.year = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->year);
+
+    ret = ((DWORD)((date_time.date.year + 2000) - 1980) << 25) | ((DWORD)date_time.date.month << 21) | ((DWORD)date_time.date.day << 16) | ((DWORD)date_time.time.hour << 11) | ((DWORD)date_time.time.minute << 5) | (date_time.time.second >> 1);
+
+    return ret;
+#endif
   /* USER CODE END get_fattime */
 }
 

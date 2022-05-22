@@ -8,6 +8,8 @@
 #include "gps.h"
 #include <stdarg.h>
 
+
+#if(0)
 #include "stm32l4xx_ll_usart.h"
 #include "stm32l4xx_ll_dma.h"
 #include "stm32l4xx_ll_bus.h"
@@ -574,3 +576,5 @@ void gps_uart_deinit(void){
 	NVIC_DisableIRQ(UART4_IRQn);
 	NVIC_DisableIRQ(DMA2_Channel5_IRQn);
 }
+
+#endif

@@ -27,29 +27,67 @@
 /* Includes ------------------------------------------------------------------*/
 
 /* USER CODE BEGIN Includes */
-
+#include "stm32l4xx_ll_gpio.h"
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
+
+#define PIN_MASK(pin_num)     (1UL << (pin_num))
+
 #define IO_ADS1_CS_PORT                       GPIOA
-#define IO_ADS1_CS_PIN                        LL_GPIO_PIN_4
-#define IO_ADS1_DRDY_PORT                      GPIOB
-#define IO_ADS1_DRDY_PIN                       LL_GPIO_PIN_1
+#define IO_ADS1_CS_PIN                        (4)
+
+#define IO_ADS1_DRDY_PORT                     GPIOB
+#define IO_ADS1_DRDY_PIN                      (1)
+
+#define IO_ADS_START_PORT                     GPIOC
+#define IO_ADS_START_PIN                      (5)
+
+#define IO_ADS_RESET_PORT                     GPIOC
+#define IO_ADS_RESET_PIN                      (4)
+
+#define IO_DEC5V_PORT                         GPIOB
+#define IO_DEC5V_PIN                          (3)
+
+#define IO_BZ_PORT                            GPIOA
+#define IO_BZ_PIN                             (1)
+
+#define IO_TS_PORT                            GPIOB
+#define IO_TS_PIN                             (4)
+
 
 /* USER CODE END Private defines */
 
-#if(0)
-void MX_GPIO_Init(void);
 
-/* USER CODE BEGIN Prototypes */
 
-void gpio_pa4_change_mode(uint32_t in_mode);
+void gpio_power_optimizer(GPIO_TypeDef *port, int32_t pin_num);
 
-void optimize_gpio_power(GPIO_TypeDef *in_gpio, uint32_t in_pin);
-
-#endif
 
 void gpio_all_set_analog(void);
+
+void gpio_output_initialize(void);
+
+void gpio_input_initialize(void);
+
+static inline uint8_t gpio_dec5v(void){
+    return (LL_GPIO_ReadInputPort(IO_DEC5V_PORT) & PIN_MASK(IO_DEC5V_PIN));
+}
+
+static inline void gpio_buzzer_on(void){
+    LL_GPIO_SetOutputPin(IO_BZ_PORT, PIN_MASK(IO_BZ_PIN));
+}
+
+static inline void gpio_buzzer_off(void){
+    LL_GPIO_ResetOutputPin(IO_BZ_PORT, PIN_MASK(IO_BZ_PIN));
+}
+
+static inline void gpio_ts3a_mcu(void){
+    LL_GPIO_ResetOutputPin(IO_TS_PORT, PIN_MASK(IO_TS_PIN));
+}
+
+static inline void gpio_ts3a_usb(void){
+    LL_GPIO_SetOutputPin(IO_TS_PORT, PIN_MASK(IO_TS_PIN));
+}
 
 /* USER CODE END Prototypes */
 

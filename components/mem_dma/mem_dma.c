@@ -46,7 +46,7 @@ void*    memcpy_dma (void *__restrict dst, const void *__restrict src, size_t s)
 //	while(LL_DMA_IsActiveFlag_TC1(MEM_DMA) == 0);
 //	while(!(MEM_DMA->ISR & DMA_ISR_TCIF1));
 	while(!(((DMA_TypeDef *)0x40020000UL)->ISR & DMA_ISR_TCIF1));
-	LL_DMA_ClearFlag_GI1(MEM_DMA);
+	LL_DMA_ClearFlag_TC1(MEM_DMA);
 	return dst;
 }
 

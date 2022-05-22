@@ -58552,7 +58552,7 @@
             <register>
                <name>SHPR1</name>
                <displayName>SHPR1</displayName>
-               <description>System handler priority           registers</description>
+               <description>System peripheral_isr_handler priority           registers</description>
                <addressOffset>0x18</addressOffset>
                <size>0x20</size>
                <access>read-write</access>
@@ -58560,19 +58560,19 @@
                <fields>
                   <field>
                      <name>PRI_4</name>
-                     <description>Priority of system handler               4</description>
+                     <description>Priority of system peripheral_isr_handler               4</description>
                      <bitOffset>0</bitOffset>
                      <bitWidth>8</bitWidth>
                   </field>
                   <field>
                      <name>PRI_5</name>
-                     <description>Priority of system handler               5</description>
+                     <description>Priority of system peripheral_isr_handler               5</description>
                      <bitOffset>8</bitOffset>
                      <bitWidth>8</bitWidth>
                   </field>
                   <field>
                      <name>PRI_6</name>
-                     <description>Priority of system handler               6</description>
+                     <description>Priority of system peripheral_isr_handler               6</description>
                      <bitOffset>16</bitOffset>
                      <bitWidth>8</bitWidth>
                   </field>
@@ -58581,7 +58581,7 @@
             <register>
                <name>SHPR2</name>
                <displayName>SHPR2</displayName>
-               <description>System handler priority           registers</description>
+               <description>System peripheral_isr_handler priority           registers</description>
                <addressOffset>0x1C</addressOffset>
                <size>0x20</size>
                <access>read-write</access>
@@ -58589,7 +58589,7 @@
                <fields>
                   <field>
                      <name>PRI_11</name>
-                     <description>Priority of system handler               11</description>
+                     <description>Priority of system peripheral_isr_handler               11</description>
                      <bitOffset>24</bitOffset>
                      <bitWidth>8</bitWidth>
                   </field>
@@ -58598,7 +58598,7 @@
             <register>
                <name>SHPR3</name>
                <displayName>SHPR3</displayName>
-               <description>System handler priority           registers</description>
+               <description>System peripheral_isr_handler priority           registers</description>
                <addressOffset>0x20</addressOffset>
                <size>0x20</size>
                <access>read-write</access>
@@ -58606,13 +58606,13 @@
                <fields>
                   <field>
                      <name>PRI_14</name>
-                     <description>Priority of system handler               14</description>
+                     <description>Priority of system peripheral_isr_handler               14</description>
                      <bitOffset>16</bitOffset>
                      <bitWidth>8</bitWidth>
                   </field>
                   <field>
                      <name>PRI_15</name>
-                     <description>Priority of system handler               15</description>
+                     <description>Priority of system peripheral_isr_handler               15</description>
                      <bitOffset>24</bitOffset>
                      <bitWidth>8</bitWidth>
                   </field>
@@ -58621,7 +58621,7 @@
             <register>
                <name>SHCSR</name>
                <displayName>SHCSR</displayName>
-               <description>System handler control and state           register</description>
+               <description>System peripheral_isr_handler control and state           register</description>
                <addressOffset>0x24</addressOffset>
                <size>0x20</size>
                <access>read-write</access>

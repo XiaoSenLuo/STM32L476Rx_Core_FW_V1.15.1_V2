@@ -36,13 +36,11 @@
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
-
-
-/* USER CODE BEGIN Prototypes */
-
 static inline uint8_t sd_detect(void){
     return (LL_GPIO_ReadInputPort(GPIOA) & GPIO_PIN_15) ? 1 : 0;
 }
+
+/* USER CODE BEGIN Prototypes */
 
 
 int sdmmc_initialize(SD_HandleTypeDef* *hsd_handle);

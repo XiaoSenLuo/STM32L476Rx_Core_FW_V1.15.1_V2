@@ -26,7 +26,7 @@ extern "C" {
 #define INI_HANDLER_LINENO 0
 #endif
 
-/* Typedef for prototype of handler function. */
+/* Typedef for prototype of peripheral_isr_handler function. */
 #if INI_HANDLER_LINENO
 typedef int (*ini_handler)(void* user, const char* section,
                            const char* name, const char* value,
@@ -45,9 +45,9 @@ typedef char* (*ini_reader)(char* str, int num, void* stream);
    is "" if name=value pair parsed before any section heading. name:value
    pairs are also supported as a concession to Python's configparser.
 
-   For each name=value pair parsed, call handler function with given user
+   For each name=value pair parsed, call peripheral_isr_handler function with given user
    pointer as well as section, name, and value (data only valid for duration
-   of handler call). Handler should return nonzero on success, zero on error.
+   of peripheral_isr_handler call). Handler should return nonzero on success, zero on error.
 
    Returns 0 on success, line number of first error on parse error (doesn't
    stop on first error), -1 on file open error, or -2 on memory allocation
@@ -71,7 +71,7 @@ already in memory. */
 int ini_parse_string(const char* string, ini_handler handler, void* user);
 
 /* Nonzero to allow multi-line value parsing, in the style of Python's
-   configparser. If allowed, ini_parse() will call the handler with the same
+   configparser. If allowed, ini_parse() will call the peripheral_isr_handler with the same
    name for each subsequent line parsed. */
 #ifndef INI_ALLOW_MULTILINE
 #define INI_ALLOW_MULTILINE 1
@@ -128,15 +128,15 @@ int ini_parse_string(const char* string, ini_handler handler, void* user);
 #define INI_STOP_ON_FIRST_ERROR 0
 #endif
 
-/* Nonzero to call the handler at the start of each new section (with
-   name and value NULL). Default is to only call the handler on
+/* Nonzero to call the peripheral_isr_handler at the start of each new section (with
+   name and value NULL). Default is to only call the peripheral_isr_handler on
    each name=value pair. */
 #ifndef INI_CALL_HANDLER_ON_NEW_SECTION
 #define INI_CALL_HANDLER_ON_NEW_SECTION 0
 #endif
 
 /* Nonzero to allow a name without a value (no '=' or ':' on the line) and
-   call the handler with value NULL in this case. Default is to treat
+   call the peripheral_isr_handler with value NULL in this case. Default is to treat
    no-value lines as an error. */
 #ifndef INI_ALLOW_NO_VALUE
 #define INI_ALLOW_NO_VALUE 0

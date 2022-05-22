@@ -144,7 +144,7 @@ static void usart1_isr_handler(void* ctx){
         if((uart1_user_rx_message.action.lock) || (uart1_rx_message.length == 0)) goto end_section;
         uart1_user_rx_message.action.lock = 1;
         uart1_user_rx_message.action.read = 0;
-        /// TODO 复制数据队列到用户缓冲区
+
         if(uart1_rx_message.length < 0){ /// 队尾小于队首
             uart1_rx_message.length = USART1_DATA_BUFFER_SIZE + uart1_rx_message.length;
             for(int i = 0; i < 2; i++){
@@ -449,7 +449,7 @@ static void lpuart1_isr_handler(void *ctx){
         if((lpuart1_user_rx_message.action.lock) || (lpuart1_rx_message.length == 0)) goto end_section;
         lpuart1_user_rx_message.action.lock = 1;
         lpuart1_user_rx_message.action.read = 0;
-        /// TODO 复制数据队列到用户缓冲区
+
         if(lpuart1_rx_message.length < 0){ /// 队尾小于队首
             lpuart1_rx_message.length = LPUART1_DATA_BUFFER_SIZE + lpuart1_rx_message.length;
             for(int i = 0; i < 2; i++){
@@ -631,6 +631,7 @@ uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_
         lpuart1_user_rx_message.length -= rl;
         lpuart1_user_rx_message.action.lock = 0;
         break;
+
         continue_section:
         tick = HAL_GetTick();
     }while(((tick - start_tick) < timeout) && timeout);

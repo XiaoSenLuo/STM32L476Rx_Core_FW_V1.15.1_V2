@@ -18,14 +18,14 @@ void ads127_driver_initialaiz(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPor
         GPIO_InitTypeDef GPIO_InitStructure = {
                 .Alternate = 0,
                 .Mode = GPIO_MODE_OUTPUT_PP,
-                .Pin = csPin,
+                .Pin = 1UL << csPin,
                 .Pull = GPIO_PULLUP,
                 .Speed = GPIO_SPEED_LOW,
         };
         HAL_GPIO_Init(csPort, &GPIO_InitStructure);
-        HAL_GPIO_WritePin(csPort, csPin, 1);
+        HAL_GPIO_WritePin(csPort, 1UL << csPin, 1);
         adsCSPort = csPort;
-        adsCSPin = csPin;
+        adsCSPin = 1UL << csPin;
     }
     if(HAL_SPI_TransmitReceive(spihandle, test, test, sizeof test, 1000) == HAL_OK){
         ads_spi_handle = spihandle;

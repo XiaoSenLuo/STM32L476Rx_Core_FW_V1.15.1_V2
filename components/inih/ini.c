@@ -127,7 +127,7 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
 #endif
 
 #if INI_HANDLER_LINENO
-#define HANDLER(u, s, n, v) handler(u, s, n, v, lineno)
+#define HANDLER(u, s, n, v) peripheral_isr_handler(u, s, n, v, lineno)
 #else
 #define HANDLER(u, s, n, v) handler(u, s, n, v)
 #endif
@@ -209,7 +209,7 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
                 value = lskip(value);
                 rstrip(value);
 
-                /* Valid name[=:]value pair found, call handler */
+                /* Valid name[=:]value pair found, call peripheral_isr_handler */
                 strncpy0(prev_name, name, sizeof(prev_name));
                 if (!HANDLER(user, section, name, value) && !error)
                     error = lineno;

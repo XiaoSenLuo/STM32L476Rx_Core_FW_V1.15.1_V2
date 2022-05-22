@@ -244,7 +244,7 @@ g_pfnVectors:
 
 /*******************************************************************************
 *
-* Provide weak aliases for each Exception handler to the Default_Handler.
+* Provide weak aliases for each Exception peripheral_isr_handler to the Default_Handler.
 * As they are weak aliases, any function with the same name will override
 * this definition.
 *

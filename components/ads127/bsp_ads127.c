@@ -198,10 +198,10 @@ void ads127_bsp_read_data_from_isr(void * ctx){
     ads_read_ctrl.count.counter = 0;  /// 重置计数器
     if(spi_handle == NULL) return;
     if((ads_read_ctrl.data.index + ads_read_ctrl.data.limit.step) > ads_read_ctrl.data.limit.size){  /// 检查剩余空间
-        /// 剩余空间不够, 交换cache
+        /// 剩余空间不够, 交换 cache
         swap_cache_address(&ads_read_ctrl);
     }
-    /// TODO 时间戳
+
     if(ads_read_ctrl.data.index == ADS_DATA_CACHE_OFFSET){
         struct tm time = { 0 };
         st_rtc_get_time(&time);   /// 获取首次时间
@@ -209,7 +209,7 @@ void ads127_bsp_read_data_from_isr(void * ctx){
         header->time.time.msecond = st_rtc_get_subsecond();
     }
 
-    uint8_t tx[4] = {0, 0, 0, 0};  //// 无需发送命令
+    uint8_t tx[4] = {0, 0, 0, 0};  //// 无需发送命令, 当 DRDY 变低时, 采样数据已经移入移位寄存器中
 
     ads127_cs_set_level(0);
 #if(0)
@@ -223,7 +223,7 @@ void ads127_bsp_read_data_from_isr(void * ctx){
 #endif
 }
 
-void ads127_bsp_read_data_cplt_callback(void){
+__weak void ads127_bsp_read_data_cplt_callback(void){
 #if(0)
     ads_read_ctrl.data.index += ads_read_ctrl.data.limit.step;
     if(adsCSPin >= 0) LL_GPIO_SetOutputPin(adsCSPort, adsCSPin);
@@ -233,7 +233,6 @@ void ads127_bsp_read_data_cplt_callback(void){
 
 static GPIO_TypeDef *adsDRDYPinPort = NULL, *adsStartPinPort = NULL, *adsResetPinPort = NULL;
 static int32_t adsDRDYPin = -1, adsStartPin = -1, adsResetPin = -1;
-
 static int adsDRDY_IRQn = -255;
 
 void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_drdy_callback_t fn, void *ctx){
@@ -241,20 +240,20 @@ void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_d
     GPIO_InitTypeDef GPIO_InitStructure = {
             .Alternate = 0,
             .Mode = GPIO_MODE_IT_FALLING,
-            .Pin = drdyPin,
+            .Pin = 1UL << drdyPin,
             .Pull = LL_GPIO_PULL_UP,
             .Speed = GPIO_SPEED_LOW,
     };
     if(drdyPort && (drdyPin >= 0)){
         HAL_GPIO_Init(drdyPort, &GPIO_InitStructure);
 
-        int gpio = gpio_mask2num(drdyPin);
-        adsDRDY_IRQn = gpio_get_irqn(gpio);;
+        int gpio = (gpio_num_t)drdyPin;
+        adsDRDY_IRQn = gpio_get_irqn(gpio);
+        ll_gpio_exti_isr_install((gpio_num_t)gpio, fn, ctx);
         HAL_NVIC_SetPriority(adsDRDY_IRQn, 5, 0);
         HAL_NVIC_EnableIRQ(adsDRDY_IRQn);
-        ll_gpio_exti_isr_install((gpio_num_t)gpio, fn, ctx);
     }
-    adsDRDYPin = drdyPin;
+    adsDRDYPin = 1UL << drdyPin;
     adsDRDYPinPort = drdyPort;
 }
 
@@ -271,14 +270,14 @@ void ads127_bsp_start_pin_initial(GPIO_TypeDef * startPort, int32_t startPin){
         GPIO_InitTypeDef GPIO_InitStructure = {
                 .Alternate = 0,
                 .Mode = GPIO_MODE_OUTPUT_PP,
-                .Pin = startPin,
+                .Pin = 1UL << startPin,
                 .Pull = LL_GPIO_PULL_DOWN,
                 .Speed = GPIO_SPEED_LOW,
         };
         HAL_GPIO_Init(startPort, &GPIO_InitStructure);
-        HAL_GPIO_WritePin(startPort, startPin, 0);
+        HAL_GPIO_WritePin(startPort, 1UL << startPin, 0);
         adsStartPinPort = startPort;
-        adsStartPin = startPin;
+        adsStartPin = 1UL << startPin;
     }
 }
 
@@ -302,14 +301,14 @@ void ads127_bsp_reset_pin_initial(GPIO_TypeDef * resetPort, int32_t resetPin){
         GPIO_InitTypeDef GPIO_InitStructure = {
                 .Alternate = 0,
                 .Mode = GPIO_MODE_OUTPUT_PP,
-                .Pin = resetPin,
+                .Pin = 1UL << resetPin,
                 .Pull = LL_GPIO_PULL_DOWN,
                 .Speed = GPIO_SPEED_LOW,
         };
         HAL_GPIO_Init(resetPort, &GPIO_InitStructure);
-        HAL_GPIO_WritePin(resetPort, resetPin, 0);
+        HAL_GPIO_WritePin(resetPort, 1UL << resetPin, 0);
         adsResetPinPort = resetPort;
-        adsResetPin = resetPin;
+        adsResetPin = 1UL << resetPin;
     }
 }
 
