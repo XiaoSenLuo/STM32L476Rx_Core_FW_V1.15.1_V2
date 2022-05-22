@@ -203,6 +203,7 @@ typedef RTC_HandleTypeDef * RTC_HandleTypeDef_Handle;
 
 int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle);
 
+int rt_time2str(const rtc_date_time_t *dt, char *str, size_t length);
 
 /* USER CODE END Prototypes */
 

@@ -163,7 +163,7 @@ uint8_t st_rtc_get_time_v2(rtc_date_time_t* time){
     time->date.day = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->day);
     time->date.weekday = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->wdu);
     time->date.month = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->mon);
-    time->date.year = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->year);
+    time->date.year = __LL_RTC_CONVERT_BCD2BIN(bcd_date_handle->year) + 2000;
 
     return 0;
 }
@@ -351,6 +351,20 @@ uint8_t st_rtc_config_timeout(uint16_t in_timeout){
 
 void RTC_SetUTCTime(uint32_t utcTime){
 
+}
+
+
+static const char *time_str[60] = {
+        "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "45", "46", "47", "48", "49", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59"
+};
+
+
+#include "stdio.h"
+
+int rt_time2str(const rtc_date_time_t *dt, char *str, size_t length){
+    return snprintf(str, length, "%d-%s-%s-%s-%s-%s",
+             dt->date.year, time_str[dt->date.month], time_str[dt->date.day],
+             time_str[dt->time.hour], time_str[dt->time.minute], time_str[dt->time.second]);
 }
 
 
