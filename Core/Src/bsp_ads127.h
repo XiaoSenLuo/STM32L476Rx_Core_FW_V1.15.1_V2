@@ -10,6 +10,8 @@
 
 #include "ads127.h"
 #include "ads127_driver.h"
+#include "stdbool.h"
+
 
 typedef struct ads_data_init_s{
     union{
@@ -20,8 +22,17 @@ typedef struct ads_data_init_s{
         };
         uint8_t val;
     }config;
-    uint32_t crate;          /// 目标采样率
-    int16_t osr;             /// 过采样因子
+    union{
+        struct{
+            uint8_t fsmode : 1;
+            uint8_t format : 1;
+            uint8_t filter : 2;
+            uint8_t osr : 2;
+            uint8_t hr : 1;
+            uint8_t bit7 : 1;
+        };
+        uint8_t val;
+    }mode;
     uint32_t clk;            /// 采样时钟
 }ads_data_init_t;
 
@@ -36,9 +47,7 @@ void ads127_bsp_disable_drdy(void);
 
 void ads127_bsp_read_init(const ads_data_init_t* init);
 
-void ads127_bsp_read_data_from_isr(void* ctx);        /// 启动数据读取流程, 非阻塞, ads127_bsp_read_data_cplt_callback()
-                                                      /// 应该被调用当数据读取完成时
-
+void ads127_bsp_read_data_from_isr(void* ctx);        /// 启动数据读取流程
 
 void ads127_bsp_read_data_cplt_callback(void);   /// 数据读取完成回调, 此函数应该在SPI接收完成回调函数中调用
 
@@ -54,12 +63,13 @@ static inline void ads127_bsp_stop_read_data(void){
 void ads127_bsp_start_pin_initial(GPIO_TypeDef * startPort, int32_t startPin);
 
 void ads127_bsp_start(void);
+bool ads127_bsp_is_start(void);
 void ads127_bsp_stop(void);
 
 void ads127_bsp_reset_pin_initial(GPIO_TypeDef * resetPort, int32_t resetPin);
 
 void ads127_bsp_reset(void);
-
+void ads127_bsp_keep_reset(void);
 
 //// data stream support
 
@@ -67,15 +77,18 @@ void ads127_bsp_reset(void);
 #include "rtc.h"
 
 typedef struct ads_file_header_s {
-    uint32_t counter;
+    uint64_t counter;
     uint32_t length;
     rtc_date_time_t time;
 }ads_file_header_t;
 
 typedef struct ads_file_header_s * ads_file_header_handle;
 
-uint32_t ads127_bsp_availablle(void);
+uint32_t ads127_bsp_availablle(void* *ptr);
+int ads127_bsp_lock_user(void);
+int ads127_bsp_unlock_user(void);
 uint32_t ads127_bsp_write_file(void *file);
 
+uint32_t ads127_bsp_create_file(void *file);
 
 #endif /* ADS127_BSP_ADS127_H_ */
