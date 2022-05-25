@@ -59,6 +59,7 @@ include_directories(
         Drivers/CMSIS/Device/ST/STM32L4xx/Include
         Drivers/CMSIS/Include
         Core/Inc
+        Core/Src
         components/FATFS/Target
         components/FATFS/App
         components/FatFs/src
@@ -70,6 +71,7 @@ include_directories(
         components/inih
         components/mem_dma
         components/st_crc
+        components/stateMachine/src
 )
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
@@ -91,7 +93,8 @@ file(GLOB_RECURSE SOURCES
         "components/gps/*.c"
         "components/inih/*.c"
         "components/mem_dma/*.c"
-        "components/st_crc/*.c")
+        "components/st_crc/*.c"
+        "components/stateMachine/src/*.c")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32L476RCTX_FLASH.ld)
 

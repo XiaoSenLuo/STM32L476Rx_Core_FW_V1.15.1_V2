@@ -51,10 +51,10 @@ typedef struct uart_user_message_s{
     union{
         struct{
             uint8_t read : 1;
-            uint8_t lock : 1;
         };
         uint8_t val;
     }action;
+    uint8_t lock;
 }uart_user_message_t;
 
 
@@ -70,6 +70,7 @@ static uart_user_message_t __attribute__((section(".ram1"))) uart1_user_rx_messa
         .data = NULL,
         .length = 0,
         .action.val = 0,
+        .lock = 0,
 };
 
 static uart_circular_transmit_t uart1_tx_message = {
@@ -110,15 +111,6 @@ static UART_HandleTypeDef huart1 = { 0 };
 static DMA_HandleTypeDef hdma_usart1_rx = { 0 };
 static DMA_HandleTypeDef hdma_usart1_tx = { 0 };
 
-typedef struct uart_dma_state_s{
-    union{
-        struct{
-            uint8_t dma_tx_tc : 1;
-            uint8_t dma_rx_tc : 1;
-        };
-    };
-    uint8_t val;
-}uart_dma_state_t;
 
 
 static void dma_usart1_tx_isr_handler(void* ctx){
@@ -141,8 +133,8 @@ static void usart1_isr_handler(void* ctx){
 
         uart1_rx_message.length = uart1_rx_message.tail - uart1_rx_message.head;  /// 计算队列长度, 默认队尾大于队首
 
-        if((uart1_user_rx_message.action.lock) || (uart1_rx_message.length == 0)) goto end_section;
-        uart1_user_rx_message.action.lock = 1;
+        if((uart1_user_rx_message.lock) || (uart1_rx_message.length == 0)) goto end_section;
+        uart1_user_rx_message.lock = 1;
         uart1_user_rx_message.action.read = 0;
 
         if(uart1_rx_message.length < 0){ /// 队尾小于队首
@@ -166,7 +158,7 @@ static void usart1_isr_handler(void* ctx){
             }
         }
         uart1_user_rx_message.length = uart1_rx_message.length;
-        uart1_user_rx_message.action.lock = 0;
+        uart1_user_rx_message.lock = 0;
         uart1_user_rx_message.action.read = 1;
 
         uart1_rx_message.head = uart1_rx_message.tail;    /// 更新队首
@@ -294,10 +286,8 @@ int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     return err;
 }
 
-int usart1_deinitialize(UART_HandleTypeDef* uart_handle){
+int usart1_deinitialize(UART_HandleTypeDef* *uart_handle){
     int err = 0;
-
-    UNUSED(uart_handle);
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_6 | GPIO_PIN_7);
     err = HAL_UART_DeInit(&huart1);
@@ -325,6 +315,7 @@ int usart1_deinitialize(UART_HandleTypeDef* uart_handle){
         uart1_tx_message.data = NULL;
     }
 #endif
+    if(uart_handle) *uart_handle = NULL;
     return err;
 }
 
@@ -374,7 +365,7 @@ uint16_t usart1_write_bytes(UART_HandleTypeDef *uart_handle, const void* data, u
         remain -= ll;
         continue_section:
         tick = HAL_GetTick();
-    }while(((tick - start_tick) <= timeout) && (remain > 0));
+    }while(((tick - start_tick) < timeout) && (remain > 0));
 	return tl;
 }
 
@@ -386,9 +377,9 @@ uint16_t usart1_read_bytes(UART_HandleTypeDef *uart_handle, void *data, uint16_t
 
     do{
 //        if((data == NULL) || (uart1_user_rx_message.length == 0)) break;
-        if((uart1_user_rx_message.action.read == 0) || (data == NULL) || (uart1_user_rx_message.length == 0)) goto continue_section;
+        if((uart1_user_rx_message.action.read == 0) || (data == NULL) || (uart1_user_rx_message.length == 0) || (uart1_user_rx_message.lock)) goto continue_section;
 
-        uart1_user_rx_message.action.lock = 1;
+        uart1_user_rx_message.lock = 1;
         rl = (length >= uart1_user_rx_message.length) ? uart1_user_rx_message.length : length;
 
         if(rl > 64){
@@ -397,15 +388,22 @@ uint16_t usart1_read_bytes(UART_HandleTypeDef *uart_handle, void *data, uint16_t
             memcpy(data, uart1_user_rx_message.data, rl);
         }
         uart1_user_rx_message.length -= rl;
-        uart1_user_rx_message.action.lock = 0;
+        uart1_user_rx_message.lock = 0;
+        uart1_user_rx_message.action.read = 0;
         break;
         continue_section:
         tick = HAL_GetTick();
-    }while(((tick - start_tick) < timeout) && timeout);
+    }while(((tick - start_tick) < timeout));
 
     return rl;
 }
 
+uint16_t usart1_bytes_available(UART_HandleTypeDef *uart_handle){
+    UNUSED(uart_handle);
+    if((uart1_user_rx_message.action.read) && (uart1_user_rx_message.lock == 0))
+        return uart1_user_rx_message.length;
+    return 0;
+}
 
 #define LPUART1_DATA_BUFFER_SIZE        (1024)
 
@@ -423,6 +421,7 @@ static uart_user_message_t __attribute__((section(".ram1"))) lpuart1_user_rx_mes
         .data = NULL,
         .length = 0,
         .action.val = 0,
+        .lock = 0,
 };
 
 
@@ -446,8 +445,8 @@ static void lpuart1_isr_handler(void *ctx){
 
         lpuart1_rx_message.length = lpuart1_rx_message.tail - lpuart1_rx_message.head;  /// 计算队列长度, 默认队尾大于队首
 
-        if((lpuart1_user_rx_message.action.lock) || (lpuart1_rx_message.length == 0)) goto end_section;
-        lpuart1_user_rx_message.action.lock = 1;
+        if((lpuart1_user_rx_message.lock) || (lpuart1_rx_message.length == 0)) goto end_section;
+        lpuart1_user_rx_message.lock = 1;
         lpuart1_user_rx_message.action.read = 0;
 
         if(lpuart1_rx_message.length < 0){ /// 队尾小于队首
@@ -471,7 +470,7 @@ static void lpuart1_isr_handler(void *ctx){
             }
         }
         lpuart1_user_rx_message.length = lpuart1_rx_message.length;
-        lpuart1_user_rx_message.action.lock = 0;
+        lpuart1_user_rx_message.lock = 0;
         lpuart1_user_rx_message.action.read = 1;
 
         lpuart1_rx_message.head = lpuart1_rx_message.tail;    /// 更新队首
@@ -555,10 +554,8 @@ int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     return err;
 }
 
-int lpuart1_deinitialize(UART_HandleTypeDef* uart_handle){
+int lpuart1_deinitialize(UART_HandleTypeDef* *uart_handle){
     int err = 0;
-
-    UNUSED(uart_handle);
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_10 | GPIO_PIN_11);
     err = HAL_UART_DeInit(&hlpuart1);
@@ -581,6 +578,7 @@ int lpuart1_deinitialize(UART_HandleTypeDef* uart_handle){
         lpuart1_user_rx_message.data = NULL;
     }
 #endif
+    if(uart_handle) *uart_handle = NULL;
     return err;
 }
 
@@ -620,7 +618,7 @@ uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_
 //        if((data == NULL) || (lpuart1_user_rx_message.length == 0)) goto continue_section;
         if((lpuart1_user_rx_message.action.read == 0) || (data == NULL) || (lpuart1_user_rx_message.length == 0)) goto continue_section;
 
-        lpuart1_user_rx_message.action.lock = 1;
+        lpuart1_user_rx_message.lock = 1;
         rl = (length >= lpuart1_user_rx_message.length) ? lpuart1_user_rx_message.length : length;
 
         if(rl > 64){
@@ -629,12 +627,12 @@ uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_
             memcpy(data, lpuart1_user_rx_message.data, rl);
         }
         lpuart1_user_rx_message.length -= rl;
-        lpuart1_user_rx_message.action.lock = 0;
+        lpuart1_user_rx_message.lock = 0;
         break;
 
         continue_section:
         tick = HAL_GetTick();
-    }while(((tick - start_tick) < timeout) && timeout);
+    }while(((tick - start_tick) < timeout));
     return rl;
 }
 

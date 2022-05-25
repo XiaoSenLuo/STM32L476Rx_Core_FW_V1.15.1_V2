@@ -41,6 +41,8 @@ extern char sd_root_path[4]; /* SD logical drive path */
 
 int FATFS_SD_Init(FATFS* *fs);
 
+int FATFS_SD_DeInit(FATFS* *fs);
+
 /* USER CODE BEGIN Prototypes */
 int FS_FileOperations(void);
 

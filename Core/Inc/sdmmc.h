@@ -29,7 +29,7 @@
 
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_ll_gpio.h"
-
+#include "gpio.h"
 /* USER CODE END Includes */
 
 
@@ -37,7 +37,7 @@
 
 /* USER CODE END Private defines */
 static inline uint8_t sd_detect(void){
-    return (LL_GPIO_ReadInputPort(GPIOA) & GPIO_PIN_15) ? 1 : 0;
+    return (LL_GPIO_ReadInputPort(IO_SD_DET_PORT) & (1UL << IO_SD_DET_PIN)) ? 1 : 0;
 }
 
 /* USER CODE BEGIN Prototypes */

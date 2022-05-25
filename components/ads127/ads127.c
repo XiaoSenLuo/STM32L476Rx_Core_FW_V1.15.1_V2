@@ -144,7 +144,7 @@ uint8_t ads127_get_id(ads127_dev_t *device){
             .tx_data = {ADS127_COMMAND_RREG_BASE | ADS127_REG_ID, 0, 0, 0, 0},
     };
     ret = ads127_data_frame(&data_frame);
-    device->id.val = (uint8_t)ret;
+    if(device) device->id.val = (uint8_t)ret;
     return (uint8_t)ret;
 }
 

@@ -68,13 +68,13 @@ void gpio_output_initialize(void){
     GPIO_InitTypeDef GPIO_InitStructure = {
             .Alternate = 0,
             .Mode = GPIO_MODE_OUTPUT_PP,
-            .Pin = 1UL << IO_BZ_PIN,
+            .Pin = PIN_MASK(IO_BZ_PIN),
             .Pull = GPIO_PULLDOWN,
             .Speed = GPIO_SPEED_LOW,
     };
     HAL_GPIO_Init(IO_BZ_PORT, &GPIO_InitStructure);
 
-    GPIO_InitStructure.Pin = 1UL << IO_TS_PIN;
+    GPIO_InitStructure.Pin = PIN_MASK(IO_TS_PIN);
     HAL_GPIO_Init(IO_TS_PORT, &GPIO_InitStructure);
 }
 
@@ -82,11 +82,15 @@ void gpio_input_initialize(void){
     GPIO_InitTypeDef GPIO_InitStructure = {
             .Alternate = 0,
             .Mode = GPIO_MODE_INPUT,
-            .Pin = 1UL << IO_DEC5V_PIN,
+            .Pin = PIN_MASK(IO_DET_CMD_PIN),
             .Pull = GPIO_PULLDOWN,
             .Speed = GPIO_SPEED_LOW,
     };
-    HAL_GPIO_Init(IO_DEC5V_PORT, &GPIO_InitStructure);
+    HAL_GPIO_Init(IO_DET_CMD_PORT, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Pin = PIN_MASK(IO_SD_DET_PIN);  /// SD DETECT PIN
+    GPIO_InitStructure.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(IO_SD_DET_PORT, &GPIO_InitStructure);
 }
 
 /* USER CODE END 2 */

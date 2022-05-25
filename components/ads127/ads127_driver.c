@@ -10,7 +10,7 @@ static SPI_HandleTypeDef *ads_spi_handle = NULL;
 static GPIO_TypeDef *adsCSPort = NULL;
 static int32_t adsCSPin = -1;
 
-void ads127_driver_initialaiz(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPort, int32_t csPin){
+void ads127_driver_initialize(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPort, int32_t csPin){
     uint8_t test[4] = {0, 0, 0, 0};
     ads_spi_handle = spihandle;
 
@@ -25,19 +25,20 @@ void ads127_driver_initialaiz(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPor
         HAL_GPIO_Init(csPort, &GPIO_InitStructure);
         HAL_GPIO_WritePin(csPort, 1UL << csPin, 1);
         adsCSPort = csPort;
-        adsCSPin = 1UL << csPin;
+        adsCSPin = csPin;
     }
     if(HAL_SPI_TransmitReceive(spihandle, test, test, sizeof test, 1000) == HAL_OK){
-        ads_spi_handle = spihandle;
+        if(spihandle) ads_spi_handle = spihandle;
     }
 }
+
 
 void ads127_cs_set_level(uint8_t level){
     if((adsCSPin < 0) || (adsCSPort == NULL)) return;
     if(level){
-        LL_GPIO_SetOutputPin(adsCSPort, adsCSPin);
+        LL_GPIO_SetOutputPin(adsCSPort, 1UL << adsCSPin);
     }else{
-        LL_GPIO_ResetOutputPin(adsCSPort, adsCSPin);
+        LL_GPIO_ResetOutputPin(adsCSPort, 1UL << adsCSPin);
     }
 }
 

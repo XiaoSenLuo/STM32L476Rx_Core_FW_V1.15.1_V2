@@ -34,7 +34,7 @@
 
 int usart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
 
-int usart1_deinitialize(UART_HandleTypeDef* uart_handle);
+int usart1_deinitialize(UART_HandleTypeDef* *uart_handle);
 
 uint16_t usart1_start_receive(UART_HandleTypeDef *uart_handle);
 
@@ -44,9 +44,11 @@ uint16_t usart1_write_bytes(UART_HandleTypeDef *uart_handle, const void* data, u
 
 uint16_t usart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t length, uint32_t timeout);
 
+uint16_t usart1_bytes_available(UART_HandleTypeDef *uart_handle);
+
 int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
 
-int lpuart1_deinitialize(UART_HandleTypeDef* uart_handle);
+int lpuart1_deinitialize(UART_HandleTypeDef* *uart_handle);
 
 uint16_t lpuart1_start_receive(UART_HandleTypeDef *uart_handle);
 

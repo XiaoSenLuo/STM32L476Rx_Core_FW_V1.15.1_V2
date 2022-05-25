@@ -8,7 +8,7 @@
 
 #include "stm32l4xx_hal.h"
 
-void ads127_driver_initialaiz(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPort, int32_t csPin);
+void ads127_driver_initialize(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPort, int32_t csPin);
 
 typedef struct ads127_data_frame_s{
     struct{

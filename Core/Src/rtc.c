@@ -22,7 +22,7 @@
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_ll_rcc.h"
 #include "stm32l4xx_ll_pwr.h"
-#include "stm32l4xx_ll_rtc.h"
+
 
 /* USER CODE BEGIN 0 */
 
@@ -95,7 +95,7 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
 }
 
 uint8_t st_rtc_set_time(struct tm* _tm){
-    uint32_t res;
+    uint32_t res = 0;
 
     if(_tm == NULL) return 1;
 
@@ -126,9 +126,39 @@ uint8_t st_rtc_set_time(struct tm* _tm){
     return res;
 }
 
+uint8_t st_rtc_set_time_v2(const rtc_date_time_t* time){
+    uint32_t res = 0;
 
+    if(time == NULL) return 1;
+    uint32_t bcd_time = 0x00000000, bcd_date = 0x00002101;
+    u32_st_rtc_time_bcd_format_handle bcd_time_handle = NULL;
+    u32_st_rtc_date_bcd_format_handle bcd_date_handle = NULL;
 
-#include "stdio.h"
+    bcd_time_handle = &bcd_time;
+    bcd_date_handle = &bcd_date;
+
+    bcd_time_handle->sec = __LL_RTC_CONVERT_BIN2BCD(time->time.second);
+    bcd_time_handle->min = __LL_RTC_CONVERT_BIN2BCD(time->time.minute);
+    bcd_time_handle->hour = __LL_RTC_CONVERT_BIN2BCD(time->time.hour);
+    bcd_time_handle->pm = 0;  /// 24 小时制
+
+    bcd_date_handle->day = __LL_RTC_CONVERT_BIN2BCD(time->date.day);
+    bcd_date_handle->wdu = __LL_RTC_CONVERT_BIN2BCD(time->date.weekday);
+    bcd_date_handle->mon = __LL_RTC_CONVERT_BIN2BCD(time->date.month);
+    bcd_date_handle->year = __LL_RTC_CONVERT_BIN2BCD(time->date.year - 2000);
+
+    LL_RTC_DisableWriteProtection(RTC);
+    res = st_rtc_enter_initmode();
+    if(res != 0){
+        res = 1;
+    }else{
+        RTC->TR = bcd_time;
+        RTC->DR = bcd_date;
+    }
+    res = st_rtc_exit_initmode();
+    LL_RTC_EnableWriteProtection(RTC);
+    return res;
+}
 
 uint8_t st_rtc_get_time(struct tm* _tm){
     if(_tm == NULL) return 1;
@@ -147,15 +177,15 @@ uint8_t st_rtc_get_time(struct tm* _tm){
 
 uint8_t st_rtc_get_time_v2(rtc_date_time_t* time){
     if(time == NULL) return 1;
-    uint32_t bcd_time = 0, bcd_date = 0;
+    uint32_t bcd_time = 0, bcd_date = 0, ssr = 0;
     u32_st_rtc_time_bcd_format_handle bcd_time_handle = NULL;
     u32_st_rtc_date_bcd_format_handle bcd_date_handle = NULL;
-
+    ssr = READ_REG(RTC->SSR);
     bcd_time = READ_REG(RTC->TR);
     bcd_date = READ_REG(RTC->DR);
     bcd_time_handle = (u32_st_rtc_time_bcd_format_handle)&bcd_time;
     bcd_date_handle = (u32_st_rtc_date_bcd_format_handle)&bcd_date;
-
+    time->time.ssecond = 255 - (uint16_t)ssr;
     time->time.second = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->sec);
     time->time.minute = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->min);
     time->time.hour = __LL_RTC_CONVERT_BCD2BIN(bcd_time_handle->hour);
@@ -361,7 +391,7 @@ static const char *time_str[60] = {
 
 #include "stdio.h"
 
-int rt_time2str(const rtc_date_time_t *dt, char *str, size_t length){
+int rtc_time2str(const rtc_date_time_t *dt, char *str, size_t length){
     return snprintf(str, length, "%d-%s-%s-%s-%s-%s",
              dt->date.year, time_str[dt->date.month], time_str[dt->date.day],
              time_str[dt->time.hour], time_str[dt->time.minute], time_str[dt->time.second]);

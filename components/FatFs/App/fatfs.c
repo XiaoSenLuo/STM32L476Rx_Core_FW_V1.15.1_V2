@@ -42,9 +42,9 @@ int FATFS_SD_Init(FATFS* *fs)
 
     /* USER CODE BEGIN Init */
   /* additional user code for init */
-   ret = sd_driver_register(sd_root_path);
-   if(!ret)
-       ret = f_mount(&sd_fatfs, (TCHAR const*)sd_root_path, 1);   // 立即挂载
+    ret = sd_driver_register(sd_root_path);
+    if(!ret)
+        ret = f_mount(&sd_fatfs, (TCHAR const*)sd_root_path, 1);   // 立即挂载
 #if(0)
        if(ret & FR_NO_FILESYSTEM){
         MKFS_PARM mkfs_parm = {.fmt = FM_FAT32, .n_root = 0};
@@ -54,10 +54,18 @@ int FATFS_SD_Init(FATFS* *fs)
         ret = f_mount(&sd_fatfs, (TCHAR const*)sd_root_path, 1);   // 立即挂载
    }
 #endif
-   if(fs) *fs = &sd_fatfs;
+    if(fs && !ret) *fs = &sd_fatfs;
 	return ret;
 #endif
   /* USER CODE END Init */
+}
+
+int FATFS_SD_DeInit(FATFS* *fs){
+    int err = 0;
+
+    err = f_unmount(sd_root_path);
+    if(!err && (fs)) *fs = NULL;
+    return err;
 }
 
 #include "rtc.h"
@@ -363,7 +371,7 @@ uint8_t fs_create_file(FIL *in_file, const char *in_file_name){
     	pos1 = find_last_index_of_chr(in_file_name, '/');
         strncpy(dir, in_file_name, pos1);
         ret = fs_create_dir(dir);
-        if(ret != FR_OK || ret != FR_EXIST) return ret;
+        if(ret != FR_OK && ret != FR_EXIST) return ret;
         goto create_file_section;
     }else{
     	goto create_file_section;

@@ -54,6 +54,7 @@ void st_spi1_init(SPI_HandleTypeDef* *SpiHandle){
             .Pull = GPIO_NOPULL,
     };
     __HAL_RCC_GPIOA_CLK_ENABLE();
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 #if(0)
     hdma_hspi1_tx.Instance                 = DMA1_Channel3;
@@ -106,8 +107,9 @@ void st_spi1_init(SPI_HandleTypeDef* *SpiHandle){
     hspi1.Init.NSSPMode          = SPI_NSS_PULSE_DISABLE;
     hspi1.Init.Mode              = SPI_MODE_MASTER;
     __HAL_RCC_SPI1_CLK_ENABLE();
+    HAL_SPI_DeInit(&hspi1);
     if(HAL_SPI_Init(&hspi1) == HAL_OK){
-        *SpiHandle = &hspi1;
+        if(SpiHandle) *SpiHandle = &hspi1;
 #if(0)
         ll_peripheral_isr_install(DMA1_Channel3_IRQn, spi1_dma_tx_isr_handler, hspi1.hdmatx);
         ll_peripheral_isr_install(DMA1_Channel2_IRQn, spi1_dma_rx_isr_handler, hspi1.hdmarx);

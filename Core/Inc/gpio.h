@@ -34,11 +34,11 @@
 
 #define PIN_MASK(pin_num)     (1UL << (pin_num))
 
-#define IO_ADS1_CS_PORT                       GPIOA
-#define IO_ADS1_CS_PIN                        (4)
+#define IO_ADS_CS_PORT                       GPIOA
+#define IO_ADS_CS_PIN                        (4)
 
-#define IO_ADS1_DRDY_PORT                     GPIOB
-#define IO_ADS1_DRDY_PIN                      (1)
+#define IO_ADS_DRDY_PORT                     GPIOB
+#define IO_ADS_DRDY_PIN                      (1)
 
 #define IO_ADS_START_PORT                     GPIOC
 #define IO_ADS_START_PIN                      (5)
@@ -46,14 +46,20 @@
 #define IO_ADS_RESET_PORT                     GPIOC
 #define IO_ADS_RESET_PIN                      (4)
 
-#define IO_DEC5V_PORT                         GPIOB
-#define IO_DEC5V_PIN                          (3)
+#define IO_DET_CMD_PORT                         GPIOB
+#define IO_DET_CMD_PIN                          (3)
 
 #define IO_BZ_PORT                            GPIOA
 #define IO_BZ_PIN                             (1)
 
 #define IO_TS_PORT                            GPIOB
 #define IO_TS_PIN                             (4)
+
+#define IO_PPS_PORT                           GPIOA
+#define IO_PPS_PIN                            (0)
+
+#define IO_SD_DET_PORT                       GPIOA
+#define IO_SD_DET_PIN                        (15)
 
 
 /* USER CODE END Private defines */
@@ -69,8 +75,13 @@ void gpio_output_initialize(void);
 
 void gpio_input_initialize(void);
 
-static inline uint8_t gpio_dec5v(void){
-    return (LL_GPIO_ReadInputPort(IO_DEC5V_PORT) & PIN_MASK(IO_DEC5V_PIN));
+
+static uint8_t inline gpio_get_pps_level(void){
+    return ((LL_GPIO_ReadInputPort(IO_PPS_PORT) & PIN_MASK(IO_PPS_PIN)) ? 1 : 0);
+}
+
+static inline uint8_t gpio_cmd_detect(void){
+    return ((LL_GPIO_ReadInputPort(IO_DET_CMD_PORT) & PIN_MASK(IO_DET_CMD_PIN)) ? 1 : 0);
 }
 
 static inline void gpio_buzzer_on(void){
@@ -81,12 +92,20 @@ static inline void gpio_buzzer_off(void){
     LL_GPIO_ResetOutputPin(IO_BZ_PORT, PIN_MASK(IO_BZ_PIN));
 }
 
+static inline void gpio_buzzer_toggle(void){
+    LL_GPIO_TogglePin(IO_BZ_PORT, PIN_MASK(IO_BZ_PIN));
+}
+
 static inline void gpio_ts3a_mcu(void){
     LL_GPIO_ResetOutputPin(IO_TS_PORT, PIN_MASK(IO_TS_PIN));
 }
 
 static inline void gpio_ts3a_usb(void){
     LL_GPIO_SetOutputPin(IO_TS_PORT, PIN_MASK(IO_TS_PIN));
+}
+
+static inline uint8_t gpio_sd_detect(void){
+    return ((LL_GPIO_ReadInputPort(IO_SD_DET_PORT) & PIN_MASK(IO_SD_DET_PIN)) ? 1 : 0);
 }
 
 /* USER CODE END Prototypes */

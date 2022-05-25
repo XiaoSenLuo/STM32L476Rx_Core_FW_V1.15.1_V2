@@ -30,12 +30,18 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-TIM_HandleTypeDef        htim2;
+static TIM_HandleTypeDef htim2 = { 0 };
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 
 static void tim2_update_event_callback(void* ctx){
-    HAL_TIM_IRQHandler((TIM_HandleTypeDef*)ctx);
+//    HAL_TIM_IRQHandler((TIM_HandleTypeDef*)ctx);
+    TIM_HandleTypeDef *htim = (TIM_HandleTypeDef *)ctx;
+    if ((htim->Instance == TIM2) && (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_UPDATE) != RESET) && (__HAL_TIM_GET_IT_SOURCE(htim, TIM_IT_UPDATE) != RESET)){
+        __HAL_TIM_CLEAR_IT(htim, TIM_IT_UPDATE);
+//        HAL_TIM_PeriodElapsedCallback(htim);
+        HAL_IncTick();
+    }
 }
 
 /**

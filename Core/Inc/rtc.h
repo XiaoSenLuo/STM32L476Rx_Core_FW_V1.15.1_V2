@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "stm32l4xx_ll_exti.h"
+#include "stm32l4xx_ll_rtc.h"
 #include "time.h"
 /* USER CODE END Includes */
 
@@ -110,7 +111,7 @@ uint8_t st_rtc_exit_initmode(void);
 typedef struct rtc_data_time_s {
     union {
         struct {
-            uint32_t msecond : 10;
+            uint32_t ssecond : 10;
             uint32_t second : 6;
             uint32_t minute : 6;
             uint32_t hour : 5;
@@ -170,6 +171,7 @@ static inline void st_rtc_time_convert(rtc_date_time_t *new_format, const struct
 uint8_t st_rtc_set_time(struct tm* _tm);
 uint8_t st_rtc_get_time(struct tm* _tm);
 
+uint8_t st_rtc_set_time_v2(const rtc_date_time_t* time);
 uint8_t st_rtc_get_time_v2(rtc_date_time_t* time);
 
 uint32_t st_rtc_get_subsecond(void);
@@ -203,7 +205,7 @@ typedef RTC_HandleTypeDef * RTC_HandleTypeDef_Handle;
 
 int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle);
 
-int rt_time2str(const rtc_date_time_t *dt, char *str, size_t length);
+int rtc_time2str(const rtc_date_time_t *dt, char *str, size_t length);
 
 /* USER CODE END Prototypes */
 
