@@ -28,6 +28,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "stm32l4xx_hal.h"
+#include "stdbool.h"
 
 /* USER CODE END Includes */
 
@@ -46,15 +47,32 @@ uint16_t usart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t
 
 uint16_t usart1_bytes_available(UART_HandleTypeDef *uart_handle);
 
+#if(0)
 int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
 
 int lpuart1_deinitialize(UART_HandleTypeDef* *uart_handle);
 
 uint16_t lpuart1_start_receive(UART_HandleTypeDef *uart_handle);
+bool lpuart1_is_start_receive(UART_HandleTypeDef *uart_handle);
 
 void lpuart1_stop_receive(UART_HandleTypeDef *uart_handle);
 
 uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t length, uint32_t timeout);
+
+#else
+int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud);
+
+int lpuart1_deinitialize(UART_HandleTypeDef* *uart_handle);
+
+void lpuart1_install_char_process_handler(void (*handler)(uint8_t, void *), void *ctx);
+
+uint16_t lpuart1_start_receive(UART_HandleTypeDef *uart_handle);
+
+void lpuart1_stop_receive(UART_HandleTypeDef *uart_handle);
+
+uint16_t lpuart1_write_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t length, uint32_t timeout);
+
+#endif
 
 /* USER CODE END Prototypes */
 

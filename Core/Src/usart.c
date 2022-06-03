@@ -25,7 +25,7 @@
 #include "usart.h"
 #include "string.h"
 #include "mem_dma.h"
-
+#include "circular_buffer.h"
 
 #define UART_BUFFER_MALLOC
 
@@ -47,7 +47,7 @@ typedef struct uart_circular_transmit_s {
 
 typedef struct uart_user_message_s{
     uint8_t *data;
-    uint16_t length;
+    int16_t length;
     union{
         struct{
             uint8_t read : 1;
@@ -158,8 +158,8 @@ static void usart1_isr_handler(void* ctx){
             }
         }
         uart1_user_rx_message.length = uart1_rx_message.length;
-        uart1_user_rx_message.lock = 0;
         uart1_user_rx_message.action.read = 1;
+        uart1_user_rx_message.lock = 0;
 
         uart1_rx_message.head = uart1_rx_message.tail;    /// 更新队首
     }
@@ -405,7 +405,9 @@ uint16_t usart1_bytes_available(UART_HandleTypeDef *uart_handle){
     return 0;
 }
 
-#define LPUART1_DATA_BUFFER_SIZE        (1024)
+#if(0)
+
+#define LPUART1_DATA_BUFFER_SIZE        (256)
 
 static DMA_HandleTypeDef hdma_lpuart1_rx = {0 };
 static UART_HandleTypeDef hlpuart1 = { 0 };
@@ -416,13 +418,18 @@ static uart_circular_transmit_t __attribute__((section(".ram1"))) lpuart1_rx_mes
         .head = 0,
         .tail = 0,
 };
-
+#if(0)
 static uart_user_message_t __attribute__((section(".ram1"))) lpuart1_user_rx_message = {
         .data = NULL,
         .length = 0,
         .action.val = 0,
         .lock = 0,
 };
+#else
+
+static circular_buffer_handle lpuart1_user_rx_cbuffer_handle = NULL;
+
+#endif
 
 
 static void dma_lpuart1_tx_isr_handler(void* ctx){
@@ -430,12 +437,55 @@ static void dma_lpuart1_tx_isr_handler(void* ctx){
 }
 
 static void dma_lpuart1_rx_isr_handler(void* ctx){
-    HAL_DMA_IRQHandler((DMA_HandleTypeDef*)ctx);
+    DMA_HandleTypeDef * hdma = (DMA_HandleTypeDef *)ctx;
+
+    uint32_t flag_it = hdma->DmaBaseAddress->ISR;
+    uint32_t source_it = hdma->Instance->CCR;
+#if(1)
+    if(((flag_it & DMA_FLAG_HT7) != 0U) && ((source_it & DMA_IT_HT) != 0U)){       ///  HT
+        hdma->DmaBaseAddress->IFCR = DMA_ISR_HTIF7;
+        lpuart1_rx_message.tail = LPUART1_DATA_BUFFER_SIZE >> 1;  /// 计算队尾
+        goto copy_data;
+
+
+    }else if(((flag_it & DMA_FLAG_TC7) != 0U) && ((source_it & DMA_IT_TC) != 0U)){  /// TC
+        hdma->DmaBaseAddress->IFCR = DMA_ISR_TCIF7;
+
+        lpuart1_rx_message.tail = LPUART1_DATA_BUFFER_SIZE;  /// 计算队尾
+
+        copy_data:
+        lpuart1_rx_message.length = lpuart1_rx_message.tail - lpuart1_rx_message.head;  /// 计算队列长度, 默认队尾大于队首
+
+        circular_buffer_insert(lpuart1_user_rx_cbuffer_handle, &lpuart1_rx_message.data[lpuart1_rx_message.head], lpuart1_rx_message.length);
+
+#if(0)
+        if((lpuart1_user_rx_message.lock) || (lpuart1_rx_message.length == 0)) goto end_section;
+        lpuart1_user_rx_message.lock = 1;
+        lpuart1_user_rx_message.action.read = 0;
+        memcpy(lpuart1_user_rx_message.data, &lpuart1_rx_message.data[lpuart1_rx_message.head], lpuart1_rx_message.length);
+        lpuart1_user_rx_message.length = lpuart1_rx_message.length;
+        lpuart1_user_rx_message.lock = 0;
+        lpuart1_user_rx_message.action.read = 1;
+#else
+
+#endif
+
+        lpuart1_rx_message.head = (lpuart1_rx_message.tail == LPUART1_DATA_BUFFER_SIZE) ? 0 : lpuart1_rx_message.tail;    /// 更新队首
+
+    }
+#endif
+
+    else{
+    	HAL_DMA_IRQHandler((DMA_HandleTypeDef*)ctx);
+    }
 }
 
 static void lpuart1_isr_handler(void *ctx){
     UART_HandleTypeDef* handle = (UART_HandleTypeDef*)ctx;
     uint32_t uart_isr_flag = READ_REG(handle->Instance->ISR);
+//    uint32_t cr1its     = READ_REG(handle->Instance->CR1);
+//    uint32_t cr3its     = READ_REG(handle->Instance->CR3);
+
     if((uart_isr_flag & UART_FLAG_IDLE) && (handle->Instance == LPUART1)){   /// 空闲
         __HAL_UART_CLEAR_FLAG(handle, UART_FLAG_IDLE);
 
@@ -444,7 +494,7 @@ static void lpuart1_isr_handler(void *ctx){
         lpuart1_rx_message.tail = LPUART1_DATA_BUFFER_SIZE - pos;  /// 计算队尾
 
         lpuart1_rx_message.length = lpuart1_rx_message.tail - lpuart1_rx_message.head;  /// 计算队列长度, 默认队尾大于队首
-
+#if(0)
         if((lpuart1_user_rx_message.lock) || (lpuart1_rx_message.length == 0)) goto end_section;
         lpuart1_user_rx_message.lock = 1;
         lpuart1_user_rx_message.action.read = 0;
@@ -470,13 +520,28 @@ static void lpuart1_isr_handler(void *ctx){
             }
         }
         lpuart1_user_rx_message.length = lpuart1_rx_message.length;
-        lpuart1_user_rx_message.lock = 0;
         lpuart1_user_rx_message.action.read = 1;
+        lpuart1_user_rx_message.lock = 0;
+#else
+        if(lpuart1_rx_message.length < 0){ /// 队尾小于队首
+            lpuart1_rx_message.length = LPUART1_DATA_BUFFER_SIZE + lpuart1_rx_message.length;
+            for(int i = 0; i < 2; i++){    /// 分段拷贝
+                uint32_t cpl = 0, start = 0;
+                cpl = (i == 0) ? (LPUART1_DATA_BUFFER_SIZE - lpuart1_rx_message.head) : lpuart1_rx_message.tail;
+                start = (i == 0) ? (lpuart1_rx_message.head) : 0;
+                circular_buffer_insert(lpuart1_user_rx_cbuffer_handle, &lpuart1_rx_message.data[start], cpl);
+            }
+        }else{
+            circular_buffer_insert(lpuart1_user_rx_cbuffer_handle, &lpuart1_rx_message.data[lpuart1_rx_message.head], lpuart1_rx_message.length);
+        }
+#endif
+        end_section:
+        lpuart1_rx_message.head = (lpuart1_rx_message.tail == LPUART1_DATA_BUFFER_SIZE) ? 0 : lpuart1_rx_message.tail;    /// 更新队首
 
-        lpuart1_rx_message.head = lpuart1_rx_message.tail;    /// 更新队首
+    }else{
+    	HAL_UART_IRQHandler((UART_HandleTypeDef*)ctx);
     }
-    end_section:
-    HAL_UART_IRQHandler((UART_HandleTypeDef*)ctx);
+
 }
 
 
@@ -506,8 +571,7 @@ int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     GPIO_InitStruct.Alternate = GPIO_AF8_LPUART1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* USART1 DMA Init */
-    /* USART1_RX Init */
+    /* LPUART1 DMA Init */
     hdma_lpuart1_rx.Instance = DMA2_Channel7;
     hdma_lpuart1_rx.Init.Request = DMA_REQUEST_4;
     hdma_lpuart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -523,7 +587,7 @@ int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     ll_peripheral_isr_install(DMA2_Channel7_IRQn, dma_lpuart1_rx_isr_handler, hlpuart1.hdmarx);
     ll_peripheral_isr_install(LPUART1_IRQn, lpuart1_isr_handler, &hlpuart1);
 
-    HAL_NVIC_SetPriority(DMA2_Channel7_IRQn, 3, 0);
+    HAL_NVIC_SetPriority(DMA2_Channel7_IRQn, 2, 0);
     HAL_NVIC_EnableIRQ(DMA2_Channel7_IRQn);
 
     HAL_NVIC_SetPriority(LPUART1_IRQn, 2, 0);
@@ -534,7 +598,7 @@ int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
     hlpuart1.Init.WordLength = UART_WORDLENGTH_8B;
     hlpuart1.Init.StopBits = UART_STOPBITS_1;
     hlpuart1.Init.Parity = UART_PARITY_NONE;
-    hlpuart1.Init.Mode = UART_MODE_RX;
+    hlpuart1.Init.Mode = UART_MODE_TX_RX;
     hlpuart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     hlpuart1.Init.OverSampling = UART_OVERSAMPLING_8;
     hlpuart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
@@ -544,12 +608,22 @@ int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
 
     if(uart_handle) *uart_handle = &hlpuart1;
 #ifdef UART_BUFFER_MALLOC
+
     if(lpuart1_rx_message.data == NULL){
         lpuart1_rx_message.data = (uint8_t *)malloc(LPUART1_DATA_BUFFER_SIZE);
     }
+#if(0)
     if(lpuart1_user_rx_message.data == NULL){
         lpuart1_user_rx_message.data = (uint8_t *)malloc(LPUART1_DATA_BUFFER_SIZE);
     }
+#else
+    if(lpuart1_user_rx_cbuffer_handle == NULL){
+    	circular_buffer_create(&lpuart1_user_rx_cbuffer_handle, LPUART1_DATA_BUFFER_SIZE);
+    	lpuart1_user_rx_cbuffer_handle->lowcpy = &memcpy;
+    	lpuart1_user_rx_cbuffer_handle->fastcpy = &memcpy;
+    }
+
+#endif
 #endif
     return err;
 }
@@ -569,14 +643,24 @@ int lpuart1_deinitialize(UART_HandleTypeDef* *uart_handle){
 
     __HAL_RCC_LPUART1_CLK_DISABLE();
 #ifdef UART_BUFFER_MALLOC
+
     if(lpuart1_rx_message.data){
-        free(lpuart1_user_rx_message.data);
-        lpuart1_user_rx_message.data = NULL;
+        free(lpuart1_rx_message.data);
+        lpuart1_rx_message.data = NULL;
     }
+
+#if(0)
     if(lpuart1_user_rx_message.data){
         free(lpuart1_user_rx_message.data);
         lpuart1_user_rx_message.data = NULL;
     }
+#else
+
+    if(lpuart1_user_rx_cbuffer_handle){
+        circular_buffer_delete(lpuart1_user_rx_cbuffer_handle);
+        lpuart1_user_rx_cbuffer_handle = NULL;
+    }
+#endif
 #endif
     if(uart_handle) *uart_handle = NULL;
     return err;
@@ -588,22 +672,37 @@ uint16_t lpuart1_start_receive(UART_HandleTypeDef *uart_handle){
     uint32_t err = 0;
     UNUSED(uart_handle);
 
-    ll_peripheral_isr_install(DMA2_Channel7_IRQn, dma_lpuart1_rx_isr_handler, hlpuart1.hdmarx);
+//    lpuart1_rx_message.length = 0;
+//    lpuart1_rx_message.head = 0;
+//    lpuart1_rx_message.tail = 0;
+
+    HAL_NVIC_EnableIRQ(LPUART1_IRQn);
 
     HAL_NVIC_SetPriority(DMA2_Channel7_IRQn, 2, 0);
     HAL_NVIC_EnableIRQ(DMA2_Channel7_IRQn);
 
     err = HAL_UART_Receive_DMA(&hlpuart1, lpuart1_rx_message.data, LPUART1_DATA_BUFFER_SIZE);
-
+#if(0)
     __HAL_DMA_DISABLE_IT(hlpuart1.hdmarx, DMA_IT_HT | DMA_IT_TC);
+#else
+    __HAL_DMA_ENABLE_IT(hlpuart1.hdmarx, DMA_IT_HT | DMA_IT_TC);
+#endif
     __HAL_UART_ENABLE_IT(&hlpuart1, UART_IT_IDLE);
     return err;
 }
 
+bool lpuart1_is_start_receive(UART_HandleTypeDef *uart_handle){
+    bool ret = true;
+    if(hlpuart1.RxState == HAL_UART_STATE_READY) ret = false;
+    return ret;
+}
 
 void lpuart1_stop_receive(UART_HandleTypeDef *uart_handle){
+    UNUSED(uart_handle);
+    HAL_UART_DMAStop(&hlpuart1);
+
     HAL_NVIC_DisableIRQ(DMA2_Channel7_IRQn);
-    ll_peripheral_isr_uninstall(LPUART1_IRQn);
+    HAL_NVIC_DisableIRQ(LPUART1_IRQn);
 }
 
 
@@ -612,11 +711,11 @@ uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_
     uint32_t start_tick = 0, tick = 0;
     uint16_t rl = 0;
     start_tick = HAL_GetTick();
-    tick = start_tick;
 
+#if(0)
     do{
 //        if((data == NULL) || (lpuart1_user_rx_message.length == 0)) goto continue_section;
-        if((lpuart1_user_rx_message.action.read == 0) || (data == NULL) || (lpuart1_user_rx_message.length == 0)) goto continue_section;
+        if((lpuart1_user_rx_message.lock) || (lpuart1_user_rx_message.action.read == 0) || (data == NULL) || (lpuart1_user_rx_message.length == 0)) goto continue_section;
 
         lpuart1_user_rx_message.lock = 1;
         rl = (length >= lpuart1_user_rx_message.length) ? lpuart1_user_rx_message.length : length;
@@ -633,9 +732,181 @@ uint16_t lpuart1_read_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_
         continue_section:
         tick = HAL_GetTick();
     }while(((tick - start_tick) < timeout));
+#else
+    do{
+        rl = circular_buffer_pop(lpuart1_user_rx_cbuffer_handle, data, length);
+        if(rl <= 0) goto continue_section;
+        break;
+        continue_section:
+        tick = HAL_GetTick();
+    }while(((tick - start_tick) < timeout));
+
+#endif
     return rl;
 }
 
+#else
+
+static UART_HandleTypeDef hlpuart1 = { 0 };
+
+static void (*char_handler)(uint8_t, void*) = NULL;
+static void *char_handler_ctx = NULL;
+
+static void lpuart1_isr_handler(void *ctx){
+    UART_HandleTypeDef* huart = (UART_HandleTypeDef*)ctx;
+    uint32_t isrflags = READ_REG(huart->Instance->ISR);
+    uint32_t cr1its     = READ_REG(huart->Instance->CR1);
+    uint32_t cr3its     = READ_REG(huart->Instance->CR3);
+    uint32_t errorflags = 0;
+
+    errorflags = (isrflags & (uint32_t)(USART_ISR_PE | USART_ISR_FE | USART_ISR_ORE | USART_ISR_NE | USART_ISR_RTOF));
+    if (errorflags == 0U)
+    {
+        /* UART in mode Receiver ---------------------------------------------------*/
+
+        if (((isrflags & USART_ISR_RXNE) != 0U)
+            && ((cr1its & USART_CR1_RXNEIE) != 0U))
+        {
+            uint16_t uhMask = huart->Mask;
+            uint8_t ch = (uint8_t) (READ_REG(huart->Instance->RDR) & (uint8_t)uhMask);
+            __HAL_UART_SEND_REQ(huart, UART_RXDATA_FLUSH_REQUEST);
+            if(char_handler){
+                char_handler(ch, char_handler_ctx);
+            }
+        }
+        return;
+    }
+    if (((isrflags & USART_ISR_PE) != 0U) && ((cr1its & USART_CR1_PEIE) != 0U))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF);
+
+        huart->ErrorCode |= HAL_UART_ERROR_PE;
+    }
+    if (((isrflags & USART_ISR_FE) != 0U) && ((cr3its & USART_CR3_EIE) != 0U))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);
+
+        huart->ErrorCode |= HAL_UART_ERROR_FE;
+    }
+    if (((isrflags & USART_ISR_NE) != 0U) && ((cr3its & USART_CR3_EIE) != 0U))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_NEF);
+
+        huart->ErrorCode |= HAL_UART_ERROR_NE;
+    }
+    if (((isrflags & USART_ISR_ORE) != 0U)
+        && (((cr1its & USART_CR1_RXNEIE) != 0U) ||
+            ((cr3its & USART_CR3_EIE) != 0U)))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);
+
+        huart->ErrorCode |= HAL_UART_ERROR_ORE;
+    }
+    if (((isrflags & USART_ISR_RTOF) != 0U) && ((cr1its & USART_CR1_RTOIE) != 0U))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_RTOF);
+
+        huart->ErrorCode |= HAL_UART_ERROR_RTO;
+    }
+    __HAL_UART_ENABLE(huart);
+}
+
+int lpuart1_initialize(UART_HandleTypeDef* *uart_handle, uint32_t baud){
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+    int err = 0;
+
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_LPUART1;
+    PeriphClkInit.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_LSE;
+    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
+
+    __HAL_RCC_DMA2_CLK_ENABLE();
+    __HAL_RCC_LPUART1_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    /**LPUART1 GPIO Configuration
+    PB10     ------> LPUART1_RX
+    PB11     ------> LPUART1_TX
+    */
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_10 | GPIO_PIN_11);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF8_LPUART1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(LPUART1_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(LPUART1_IRQn);
+
+    hlpuart1.Instance = LPUART1;
+    hlpuart1.Init.BaudRate = baud;
+    hlpuart1.Init.WordLength = UART_WORDLENGTH_8B;
+    hlpuart1.Init.StopBits = UART_STOPBITS_1;
+    hlpuart1.Init.Parity = UART_PARITY_NONE;
+    hlpuart1.Init.Mode = UART_MODE_TX_RX;
+    hlpuart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    hlpuart1.Init.OverSampling = UART_OVERSAMPLING_8;
+    hlpuart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    hlpuart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    err = HAL_UART_DeInit(&hlpuart1);
+    err = HAL_UART_Init(&hlpuart1);
+
+    if(uart_handle) *uart_handle = &hlpuart1;
+    return err;
+}
+
+int lpuart1_deinitialize(UART_HandleTypeDef* *uart_handle){
+
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_10 | GPIO_PIN_11);
+    HAL_UART_DeInit(&hlpuart1);
+
+    HAL_NVIC_DisableIRQ(LPUART1_IRQn);
+
+    ll_peripheral_isr_uninstall(LPUART1_IRQn);
+
+    __HAL_RCC_LPUART1_CLK_DISABLE();
+    return 0;
+}
+
+void lpuart1_install_char_process_handler(void (*handler)(uint8_t, void *), void *ctx){
+    char_handler = handler;
+    char_handler_ctx = ctx;
+}
+
+uint16_t lpuart1_start_receive(UART_HandleTypeDef *uart_handle){
+    ll_peripheral_isr_install(LPUART1_IRQn, &lpuart1_isr_handler, &hlpuart1);
+    UART_MASK_COMPUTATION(&hlpuart1);
+
+    __HAL_UART_ENABLE_IT(&hlpuart1, UART_IT_ERR);
+    __HAL_UART_ENABLE_IT(&hlpuart1, UART_IT_PE);
+    __HAL_UART_ENABLE_IT(&hlpuart1, UART_IT_RXNE);
+
+    __HAL_UART_ENABLE(&hlpuart1);
+}
+
+void lpuart1_stop_receive(UART_HandleTypeDef *uart_handle){
+    __HAL_UART_DISABLE(&hlpuart1);
+
+    (void)(uint8_t)(hlpuart1.Instance->RDR);
+}
+
+
+
+#endif
+
+uint16_t lpuart1_write_bytes(UART_HandleTypeDef *uart_handle, void* data, uint16_t length, uint32_t timeout){
+     return (uint16_t)HAL_UART_Transmit(&hlpuart1, (uint8_t *)data, length, timeout);
+}
+
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
+#if(0)
+    if(huart->Instance == LPUART1) lpuart1_start_receive(huart);
+#endif
+    if(huart->Instance == USART1) usart1_start_receive(huart);
+}
 
 
 /* USER CODE END 0 */
