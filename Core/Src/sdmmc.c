@@ -169,7 +169,7 @@ PD2     ------> SDMMC1_CMD
     hsd.Init.ClockBypass = SDMMC_CLOCK_BYPASS_ENABLE;
     hsd.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_ENABLE;
     hsd.Init.BusWide = SDMMC_BUS_WIDE_1B;
-    hsd.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+    hsd.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_ENABLE;
     hsd.Init.ClockDiv = 0;
 
     if(sd_detect()){

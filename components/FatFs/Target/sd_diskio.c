@@ -198,10 +198,15 @@ int SD_read(uint8_t lun, uint8_t *buff, uint32_t sector, uint16_t count)
     while(SD_CheckStatus(lun) && (timeout)){
         timeout--;
     }
+#if(0)
     if((hsd_handle->ErrorCode) || (!timeout)){
         err = 1;
-        goto end_section;
     }
+#else
+    if(!timeout){
+        err = 1;
+    }
+#endif
 #else
     err = HAL_SD_ReadBlocks(hsd_handle, buff, sector, count, 1000);
 #endif
@@ -266,10 +271,15 @@ int SD_write(uint8_t lun, const uint8_t *buff, uint32_t sector, uint16_t count)
     while(SD_CheckStatus(lun) && (timeout)){
         timeout--;
     }
+#if(0)
     if((hsd_handle->ErrorCode) || (!timeout)){
         err = 1;
-        goto end_section;
     }
+#else
+    if(!timeout){
+        err = 1;
+    }
+#endif
 #else
     err = HAL_SD_WriteBlocks(hsd_handle, buff, sector, count, 1000);
 #endif

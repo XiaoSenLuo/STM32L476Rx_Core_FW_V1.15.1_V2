@@ -53,7 +53,7 @@ int FS_FileOperations(void);
  * @param len
  * @param in_error_code
  */
-void fs_error_string(char* out_error_str, uint8_t len, int in_error_code);
+char* fs_error_string(char* out_error_str, uint8_t len, int in_error_code);
 
 /**
  *

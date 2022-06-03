@@ -218,9 +218,10 @@ static const char* err_str[] = {
 		"FR_INVALID_PARAMETER",
 };
 
-void fs_error_string(char* out_error_str, uint8_t len, int in_error_code){
-    if(in_error_code > 19 - 1) return;
-    strncpy(out_error_str, err_str[in_error_code], len);
+char* fs_error_string(char* out_error_str, uint8_t len, int in_error_code){
+    if(in_error_code > 19 - 1) return "\0";
+    if(out_error_str) strncpy(out_error_str, err_str[in_error_code], len);
+    return err_str[in_error_code];
 }
 
 uint8_t fs_scan_file(const char *in_path, FILINFO *out_file_info, uint32_t *out_file_num){
@@ -371,7 +372,7 @@ uint8_t fs_create_file(FIL *in_file, const char *in_file_name){
     	pos1 = find_last_index_of_chr(in_file_name, '/');
         strncpy(dir, in_file_name, pos1);
         ret = fs_create_dir(dir);
-        if(ret != FR_OK && ret != FR_EXIST) return ret;
+        if((ret != FR_OK) && (ret != FR_EXIST)) return ret;
         goto create_file_section;
     }else{
     	goto create_file_section;
@@ -391,7 +392,7 @@ uint8_t fs_create_dir(const char *path){  // path = 0:/dir1/dir2/dir3
     while(pos2 > 0){
         strncat(dir_name, &path[pos1], pos2);
         ret = f_mkdir(dir_name);
-        if(ret != FR_OK && ret != FR_EXIST) return ret;
+        if((ret != FR_OK) && (ret != FR_EXIST)) return ret;
 //        strcat(dir_name, "/");
         pos1 += pos2;
         pos2 = find_chr(&path[pos1 + 1], '/') + 1;
