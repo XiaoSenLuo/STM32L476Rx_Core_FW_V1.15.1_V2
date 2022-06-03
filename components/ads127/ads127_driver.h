@@ -10,6 +10,8 @@
 
 void ads127_driver_initialize(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPort, int32_t csPin);
 
+void ads127_driver_deinitialize(void);
+
 typedef struct ads127_data_frame_s{
     struct{
         uint8_t tx_data[10];

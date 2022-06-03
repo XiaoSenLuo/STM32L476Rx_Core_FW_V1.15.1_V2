@@ -32,6 +32,21 @@ void ads127_driver_initialize(SPI_HandleTypeDef *spihandle, GPIO_TypeDef * csPor
     }
 }
 
+void ads127_driver_deinitialize(void){
+    if(ads_spi_handle){
+        ads_spi_handle = NULL;
+    }
+    if((adsCSPin >= 0) && adsCSPort){
+        GPIO_InitTypeDef GPIO_InitStructure = {
+                .Alternate = 0,
+                .Mode = GPIO_MODE_ANALOG,
+                .Pin = 1UL << adsCSPin,
+                .Pull = GPIO_PULLUP,
+                .Speed = GPIO_SPEED_LOW,
+        };
+        HAL_GPIO_Init(adsCSPort, &GPIO_InitStructure);
+    }
+}
 
 void ads127_cs_set_level(uint8_t level){
     if((adsCSPin < 0) || (adsCSPort == NULL)) return;
