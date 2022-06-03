@@ -42,10 +42,12 @@ typedef void (*ads_drdy_callback_t)(void*);
 
 void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_drdy_callback_t fn, void *ctx);
 
+void ads127_bsp_drdy_isr_uninstall(void);
+
 void ads127_bsp_enable_drdy(void);
 void ads127_bsp_disable_drdy(void);
 
-void ads127_bsp_read_init(const ads_data_init_t* init);
+void ads127_bsp_read_init(const ads_data_init_t* init, void (*fn)(void *), void * ctx);
 
 void ads127_bsp_read_data_from_isr(void* ctx);        /// 启动数据读取流程
 
@@ -88,7 +90,7 @@ uint32_t ads127_bsp_availablle(void* *ptr);
 int ads127_bsp_lock_user(void);
 int ads127_bsp_unlock_user(void);
 uint32_t ads127_bsp_write_file(void *file);
-
-uint32_t ads127_bsp_create_file(void *file);
+int ads127_bsp_get_file_header(void *out);
+uint32_t ads127_bsp_create_file(void *file, void *out);
 
 #endif /* ADS127_BSP_ADS127_H_ */

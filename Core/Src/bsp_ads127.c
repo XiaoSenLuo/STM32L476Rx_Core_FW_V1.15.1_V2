@@ -15,10 +15,12 @@
 #include "ads127.h"
 #include "bsp_ads127.h"
 
+
+void (*can_save_callback)(void*) = NULL;
+void *can_save_callback_ctx = NULL;
+
 static uint32_t ads127_bsp_spi_transmit_receive(SPI_HandleTypeDef *hspi, uint8_t *pTxData, uint8_t *pRxData, uint16_t Size, uint32_t timeout){
     uint32_t txallowed = 1U, sr = 0UL, err = 0;
-
-//    __HAL_RCC_SPI1_CLK_ENABLE();
 
     hspi->pRxBuffPtr  = (uint8_t *)pRxData;
     hspi->RxXferCount = Size;
@@ -28,10 +30,10 @@ static uint32_t ads127_bsp_spi_transmit_receive(SPI_HandleTypeDef *hspi, uint8_t
     hspi->TxXferSize  = Size;
 
     CLEAR_BIT(hspi->Instance->CR2, SPI_RXFIFO_THRESHOLD);
-//    if((hspi->Instance->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE){
+    if((hspi->Instance->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE){
         /* Enable SPI peripheral */
         __HAL_SPI_ENABLE(hspi);
-//    }
+    }
     while ((hspi->TxXferCount > 0U) || (hspi->RxXferCount > 0U)){
         if((__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_TXE)) && (hspi->TxXferCount > 0U) && (txallowed == 1U)){
             if (hspi->TxXferCount > 1U){
@@ -86,9 +88,9 @@ static uint32_t ads127_bsp_spi_transmit_receive(SPI_HandleTypeDef *hspi, uint8_t
     }
     sr = hspi->Instance->SR;
     if(sr & SPI_FLAG_MODF) __HAL_SPI_CLEAR_MODFFLAG(hspi);
-    if(sr & SPI_FLAG_OVR) __HAL_SPI_CLEAR_OVRFLAG(hspi);
-
-//    __HAL_RCC_SPI1_CLK_DISABLE();
+    if(sr & SPI_FLAG_OVR){
+        __HAL_SPI_CLEAR_OVRFLAG(hspi);
+    }
     return err;
 }
 
@@ -121,8 +123,6 @@ typedef struct ads_read_ctrl_s{
     union{
         struct{
             uint8_t save : 1;
-//            uint8_t user_read : 1;
-//            uint8_t swap : 1;
         };
         uint8_t val;
     }action;
@@ -141,20 +141,17 @@ static ads_read_ctrl_t ads_read_ctrl = {
         .count.val = 0,
 #endif
         .data = {
-            .ptr.user = ads_data_cache1,
-            .ptr.isr = ads_data_cache2,
-            .ptr.length = 0,
+            .ptr = {.user = ads_data_cache1, .isr = ads_data_cache2, .length = 0},
             .index = ADS_DATA_CACHE_OFFSET,
-            .limit.size = ADS_DATA_CACHE_SIZE,
-            .limit.step = 4,
+            .limit = {.size = ADS_DATA_CACHE_SIZE, .step = 4},
         },
         .current_counter  =0,
         .action.val = 0,
-        .file_header = { 0 , 0},
+        .file_header = { 0 , 0, { .time.val = 0, .date.val = 0} },
 };
 
 
-void ads127_bsp_read_init(const ads_data_init_t* init){
+void ads127_bsp_read_init(const ads_data_init_t* init, void (*fn)(void *), void * ctx){
     uint32_t osr = 0;
     ads_read_ctrl.data.limit.step = 4 - init->config.cs_enb;
     ads_read_ctrl.data.index = ADS_DATA_CACHE_OFFSET;
@@ -164,13 +161,16 @@ void ads127_bsp_read_init(const ads_data_init_t* init){
 #endif
     ads_read_ctrl.current_counter  = 0;
     ads_read_ctrl.action.val = 0;
+
+    if(fn){
+        can_save_callback = fn;
+        can_save_callback_ctx = ctx;
+    }
 }
 
 void swap_cache_address(ads_read_ctrl_t * ctrl){
-    uint8_t *tmp = ctrl->data.ptr.isr;
-
+    uint8_t *tmp = NULL;
     ctrl->file_header.counter += 1;
-//    ctrl->file_header.length = ctrl->data.index;
 
     if(ctrl->data.lock){
         ctrl->data.index = ADS_DATA_CACHE_OFFSET;   /// 重置数据指针索引
@@ -179,16 +179,20 @@ void swap_cache_address(ads_read_ctrl_t * ctrl){
 
     ctrl->data.lock = 1;
     ctrl->action.save = 0;
-
+    tmp = ctrl->data.ptr.isr;
     ctrl->data.ptr.length = ctrl->data.index;            /// 数据长度
+    ctrl->file_header.length = ctrl->data.index;
     ctrl->data.index = ADS_DATA_CACHE_OFFSET;             /// 重置数据指针索引
-
     ctrl->data.ptr.isr = ctrl->data.ptr.user;
     ctrl->data.ptr.user = tmp;
+    /// 生成文件头信息
+    ads_file_header_t *header = (ads_file_header_handle)ctrl->data.ptr.user;
+    header->time = ctrl->file_header.time;
+    header->counter = ctrl->file_header.counter;
+    header->length = ctrl->file_header.length;
 
-    ctrl->data.lock = 0;
     ctrl->action.save = 1;  /// 可以保存数据了, 此时用户应该读取 ptr->user指向的内存, 大小为 ptr.length
-
+    ctrl->data.lock = 0;
 }
 
 void ads127_bsp_read_data_from_isr(void * ctx){
@@ -207,13 +211,14 @@ void ads127_bsp_read_data_from_isr(void * ctx){
     if((ads_read_ctrl.data.index + ads_read_ctrl.data.limit.step) > ads_read_ctrl.data.limit.size){  /// 检查剩余空间
         /// 剩余空间不够, 交换 cache
         swap_cache_address(&ads_read_ctrl);
+        if(can_save_callback) can_save_callback(can_save_callback_ctx);
     }
 
     if(ads_read_ctrl.data.index == ADS_DATA_CACHE_OFFSET){
         st_rtc_get_time_v2(&ads_read_ctrl.file_header.time);   /// 获取首次时间
     }
 
-    uint8_t tx[4] = {0, 0, 0, 0};  //// 无需发送命令, 当 DRDY 变低时, 采样数据已经移入移位寄存器中
+    uint8_t tx[8] = {0, 0, 0, 0, 0, 0, 0, 0};  //// 无需发送命令, 当 DRDY 变低时, 采样数据已经移入移位寄存器中
 
     ads127_cs_set_level(0);
 #if(0)
@@ -254,11 +259,28 @@ void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_d
         int gpio = (gpio_num_t)drdyPin;
         adsDRDY_IRQn = gpio_get_irqn(gpio);
         ll_gpio_exti_isr_install((gpio_num_t)gpio, fn, ctx);
-        HAL_NVIC_SetPriority(adsDRDY_IRQn, 5, 0);
+        HAL_NVIC_SetPriority(adsDRDY_IRQn, 8, 0);
         HAL_NVIC_EnableIRQ(adsDRDY_IRQn);
     }
     adsDRDYPin = drdyPin;
     adsDRDYPinPort = drdyPort;
+}
+
+void ads127_bsp_drdy_isr_uninstall(void){
+    if(!adsDRDYPinPort && (adsDRDYPin < 0)) return;
+    HAL_NVIC_DisableIRQ(adsDRDY_IRQn);
+    ll_gpio_exti_isr_uninstall(adsDRDYPin);
+    GPIO_InitTypeDef GPIO_InitStructure = {
+            .Alternate = 0,
+            .Mode = GPIO_MODE_ANALOG,
+            .Pin = 1UL << adsDRDYPin,
+            .Pull = GPIO_PULLUP,
+            .Speed = GPIO_SPEED_LOW,
+    };
+    HAL_GPIO_Init(adsDRDYPinPort, &GPIO_InitStructure);
+    adsDRDYPin = -1;
+    adsDRDYPinPort = NULL;
+    adsDRDY_IRQn = -255;
 }
 
 void ads127_bsp_enable_drdy(void){
@@ -293,7 +315,6 @@ void ads127_bsp_start(void){
 
 bool ads127_bsp_is_start(void){
     if((adsStartPinPort != NULL) && (adsStartPin >= 0)){
-//        HAL_GPIO_WritePin(adsStartPinPort, adsStartPin, 1);
         return ((LL_GPIO_ReadOutputPort(adsStartPinPort) & (1UL << adsStartPin)) ? true : false);
     }
     return false;
@@ -338,7 +359,7 @@ void ads127_bsp_reset(void){
 }
 
 uint32_t ads127_bsp_availablle(void* *ptr){
-    if(ads_read_ctrl.action.save && !ads_read_ctrl.data.lock){
+    if((!ads_read_ctrl.data.lock) && ads_read_ctrl.action.save){
         if(ptr) *ptr = (void *)ads_read_ctrl.data.ptr.user;
         return ads_read_ctrl.data.ptr.length;
     }
@@ -353,49 +374,50 @@ int ads127_bsp_lock_user(void){
 
 int ads127_bsp_unlock_user(void){
     ads_read_ctrl.data.lock = 0;
-    ads_read_ctrl.action.save = 0;
     return ads_read_ctrl.data.lock;
 }
 
 #if(1)
 #include "fatfs.h"
 #include "string.h"
+#include "log.h"
 
 uint32_t ads127_bsp_write_file(void *file){
-    FIL* file_ptr = (FIL*)(file);
-    uint16_t write = 0;
+
+    uint32_t write = 0;
     int err = 0;
     if(ads_read_ctrl.data.lock || !ads_read_ctrl.action.save) return 0;   /// 检查是否可以写入文件
     ads_read_ctrl.data.lock = 1;   /// 加锁
-    ads_read_ctrl.action.save = 0;        /// 清除保存标志位
 
-    ads_file_header_t *header = (ads_file_header_handle)ads_read_ctrl.data.ptr.user;
-    ads_read_ctrl.file_header.length = ads_read_ctrl.data.ptr.length;
-    memcpy(header, &ads_read_ctrl.file_header, sizeof(ads_read_ctrl.file_header));
-
-    err = f_write(file_ptr, ads_read_ctrl.data.ptr.user, ads_read_ctrl.data.ptr.length, &write);
-
-    ads_read_ctrl.data.lock = 0;
-    ads_read_ctrl.action.save = 0;        /// 清除保存标志位
+    err = f_write((FIL*)file, ads_read_ctrl.data.ptr.user, ads_read_ctrl.data.ptr.length, &write);
     if(err == FR_OK){
-        f_sync(file_ptr);
+        f_sync((FIL*)file);
+    }else{
+        char *err_str = NULL;
+        err_str = fs_error_string(NULL, 0, err);
+        log_printf("数据文件写入错误[ERROR: %s]\n", err_str);
     }
-#if(0)
-    for(int i = 0; i < (ADS_DATA_CACHE_OFFSET / 4); i++){
-        *(uint32_t*)(ads_read_ctrl.data.ptr.user + i * 4) = 0;
-    }
-#endif
-    return write;
+    ads_read_ctrl.data.ptr.length -= write;
+    ads_read_ctrl.action.save = 0;
+    ads_read_ctrl.data.lock = 0;
+    return err;
 }
 
-uint32_t ads127_bsp_create_file(void *file){
+int ads127_bsp_get_file_header(void *out){
+    if(ads_read_ctrl.data.lock) return ads_read_ctrl.data.lock;
+    if(out == NULL) return 2;
+    memcpy(out, &ads_read_ctrl.file_header, sizeof(ads_read_ctrl.file_header));
+    return 0;
+}
+
+uint32_t ads127_bsp_create_file(void *file, void *out){
 #define HEX "0123456789ABCDEF"
-    uint32_t s = 0;
+    uint32_t s = 0, err = 0;
     char path[64] = {'\0'};
     rtc_date_time_t time = { 0 };
 
     if((file == NULL) || (((FIL*)file)->obj.fs)) return FR_INVALID_OBJECT;
-    strncpy(path, sd_root_path, 48);
+    strncpy(path, sd_root_path, 64);
     s = strlen(path);
     if(path[s - 1] != '/') path[s++] = '/';
     for(int i = 0; i < 3; i++){
@@ -405,12 +427,22 @@ uint32_t ads127_bsp_create_file(void *file){
             s = s + 1;
         }
     }
+    path[s] = '\0';
+    err = f_mkdir(path);
+    if((err != FR_OK) && (err != FR_EXIST)) return err;
     path[s++] = '/';
     path[s] = '\0';
     st_rtc_get_time_v2(&time);
     rtc_time2str(&time, &path[s], sizeof(path) - s);
     strcat(path, ".bin");
-    return fs_create_file((FIL*)file, path);
+#if(0)
+    err = fs_create_file((FIL*)file, path);
+#else
+    err = f_open((FIL*)file, path, FA_CREATE_ALWAYS | FA_WRITE);
+#endif
+//    log_printf("%s\n", path);
+    if(out) memcpy(out, &time, sizeof(time));
+    return err;
 #undef HEX
 }
 
