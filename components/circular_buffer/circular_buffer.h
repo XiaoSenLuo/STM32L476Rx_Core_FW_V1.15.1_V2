@@ -12,8 +12,9 @@
 extern "C" {
 #endif
 
-typedef struct circular_buffer_s {
-    void * (*cpy)(void *, const void *, size_t);
+struct circular_buffer_s {
+    void * (*lowcpy)(void *, const void *, size_t);
+    void * (*fastcpy)(void *, const void *, size_t);
 };
 
 typedef struct circular_buffer_s * circular_buffer_handle;
