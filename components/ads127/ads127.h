@@ -159,6 +159,7 @@ static inline int16_t ads127_get_osr(const ads127_dev_t *device){
     return ads_osr[device->mode.filter][device->mode.osr];
 }
 
+
 static inline uint8_t ads127_get_data_length(const ads127_dev_t *device){
     return (4 - device->config.cs_enb);
 }
