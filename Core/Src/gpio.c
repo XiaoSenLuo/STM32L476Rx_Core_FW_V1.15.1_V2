@@ -73,9 +73,11 @@ void gpio_output_initialize(void){
             .Speed = GPIO_SPEED_LOW,
     };
     HAL_GPIO_Init(IO_BZ_PORT, &GPIO_InitStructure);
+    HAL_GPIO_WritePin(IO_BZ_PORT, PIN_MASK(IO_BZ_PIN), 0);
 
     GPIO_InitStructure.Pin = PIN_MASK(IO_TS_PIN);
     HAL_GPIO_Init(IO_TS_PORT, &GPIO_InitStructure);
+    HAL_GPIO_WritePin(IO_TS_PORT, PIN_MASK(IO_TS_PIN), 0);
 }
 
 void gpio_input_initialize(void){
