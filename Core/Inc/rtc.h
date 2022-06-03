@@ -207,6 +207,8 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle);
 
 int rtc_time2str(const rtc_date_time_t *dt, char *str, size_t length);
 
+int rtc_add_seconds(struct rtc_data_time_s *dt, uint8_t sec);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

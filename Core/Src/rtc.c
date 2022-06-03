@@ -134,8 +134,8 @@ uint8_t st_rtc_set_time_v2(const rtc_date_time_t* time){
     u32_st_rtc_time_bcd_format_handle bcd_time_handle = NULL;
     u32_st_rtc_date_bcd_format_handle bcd_date_handle = NULL;
 
-    bcd_time_handle = &bcd_time;
-    bcd_date_handle = &bcd_date;
+    bcd_time_handle = (u32_st_rtc_time_bcd_format_handle)&bcd_time;
+    bcd_date_handle = (u32_st_rtc_date_bcd_format_handle)&bcd_date;
 
     bcd_time_handle->sec = __LL_RTC_CONVERT_BIN2BCD(time->time.second);
     bcd_time_handle->min = __LL_RTC_CONVERT_BIN2BCD(time->time.minute);
@@ -385,9 +385,10 @@ void RTC_SetUTCTime(uint32_t utcTime){
 
 
 static const char *time_str[60] = {
-        "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "45", "46", "47", "48", "49", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59"
+        "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59"
 };
 
+static const uint8_t month_max_day[13] = {0,31, 28, 31,30,31,30,31,31,30,31,30,31};
 
 #include "stdio.h"
 
@@ -395,6 +396,47 @@ int rtc_time2str(const rtc_date_time_t *dt, char *str, size_t length){
     return snprintf(str, length, "%d-%s-%s-%s-%s-%s",
              dt->date.year, time_str[dt->date.month], time_str[dt->date.day],
              time_str[dt->time.hour], time_str[dt->time.minute], time_str[dt->time.second]);
+}
+
+int rtc_add_seconds(struct rtc_data_time_s *dt, uint8_t sec){
+    uint8_t csec = 0, cmin = 0, chour = 0, cday = 0, cmon = 0, cyear = 0;
+
+    dt->time.second += sec;
+    if(dt->time.second > 59){
+        csec = 1;
+        dt->time.second = 0;
+    }
+    if(csec){
+        dt->time.minute += csec;
+        if(dt->time.minute > 59){
+            cmin = 1;
+            dt->time.minute = 0;
+        }
+    }
+    if(cmin){
+        dt->time.hour += cmin;
+        if(dt->time.hour > 23){
+            chour = 1;
+            dt->time.hour = 0;
+        }
+    }
+    if(chour){
+        dt->date.day += chour;
+        if(dt->date.day > month_max_day[dt->date.month]){
+            cmon = 1;
+            dt->date.day = 1;
+        }
+    }
+    if(cday){
+        dt->date.month += cday;
+        if(dt->date.month > 12){
+            cmon = 1;
+            dt->date.month = 1;
+        }
+    }
+    if(cmon){
+        dt->date.year += cmon;
+    }
 }
 
 
