@@ -411,15 +411,18 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 void WWDG_IRQHandler(void){
-
+    if(peripheral_isr_handler[WWDG_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[WWDG_IRQn].isr_func_handle(peripheral_isr_handler[WWDG_IRQn].ctx);
 }
 
 void PVD_PVM_IRQHandler(void){
-
+    if(peripheral_isr_handler[PVD_PVM_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[PVD_PVM_IRQn].isr_func_handle(peripheral_isr_handler[PVD_PVM_IRQn].ctx);
 }
 
 void TAMP_STAMP_IRQHandler(void){
-
+    if(peripheral_isr_handler[TAMP_STAMP_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[TAMP_STAMP_IRQn].isr_func_handle(peripheral_isr_handler[TAMP_STAMP_IRQn].ctx);
 }
 
 void RTC_WKUP_IRQHandler(void){
@@ -429,7 +432,8 @@ void RTC_WKUP_IRQHandler(void){
 }
 
 void FLASH_IRQHandler(void){
-
+    if(peripheral_isr_handler[FLASH_IRQn].isr_func_handle == NULL) return;
+    peripheral_isr_handler[FLASH_IRQn].isr_func_handle(peripheral_isr_handler[FLASH_IRQn].ctx);
 }
 
 /**
