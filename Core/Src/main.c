@@ -46,10 +46,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "cmd.h"
+
 #include "bsp_gps.h"
 #include "fatfs.h"
-#include "config_ini.h"
+#include "bsp_ini.h"
 #include "bsp_ads127.h"
 #include "mem_dma.h"
 #include "main.h"
@@ -76,6 +76,24 @@
 
 #define TIME_FILE_PATH               "0:/time.txt"
 
+typedef enum{
+    SYS_CORE_FREQ_32M = 32000000UL,
+    SYS_CORE_FREQ_36M = 36000000UL,
+    SYS_CORE_FREQ_48M = 48000000UL,
+    SYS_CORE_FREQ_64M = 64000000UL,
+    SYS_CORE_FREQ_72M = 72000000UL,
+    SYS_CORE_FREQ_80M = 80000000UL,
+}SYS_Core_Freq_t;
+
+typedef enum{
+    MCO_FREQ_1M = 10000000UL,
+    MCO_FREQ_2M = 2000000UL,
+    MCO_FREQ_4M = 4000000UL,
+    MCO_FREQ_8M = 8000000UL,
+    MCO_FREQ_16M = 16000000UL
+}mco_freq_t;
+
+
 typedef union {
     struct {
         uint32_t self_test : 1;
@@ -101,11 +119,13 @@ static system_config_t system_config = {
                 .baudrate = 9600,
         },
         .ads = {
-                .ctrl = {.conver_rate = UINT32_MAX, .file.val = 60 << 2},
+                .clk = MCO_FREQ_16M,
+                .conver_rate = UINT32_MAX,
+                .file.val = 60 << 2,
         },
         .sd = {
                 .fm = {.val = 4},
-                .file_limit = 1,
+                .file_size_limit = 1,
         },
         .rtc = {
         },
@@ -133,7 +153,7 @@ struct analog_domain_data_s{
 
 static struct analog_domain_data_s analog_data_domain = {
         .fs = &sd_fs_handle,
-        .ads_data_file = { 0 },
+        .ads_data_file = { {0} },
         .file_create_time = {.time.val = 0, .date.val = 0},
         .ads_spi_handle = {NULL, NULL},
         .device = ADS127_DEFAULT_DEVICE(),
@@ -185,6 +205,7 @@ struct idle_domain_data_s {
     struct analog_domain_data_s * analog_domain;
     struct gps_domain_data_s * gps_domain;
     struct cmd_domain_data_s * cmd_domain;
+    system_config_t *sys_config;
     uint32_t start_tick;
     system_fild_t *fild;
 };
@@ -195,6 +216,7 @@ static struct idle_domain_data_s idle_data_domain = {
     .analog_domain = &analog_data_domain,
     .gps_domain = &gps_data_domain,
     .cmd_domain = &cmd_data_domain,
+    .sys_config = &system_config,
     .start_tick = 0,
     .fild = &sys_fild,
 };
@@ -205,30 +227,11 @@ static struct idle_domain_data_s idle_data_domain = {
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-typedef enum{
-    SYS_CORE_FREQ_32M = 32000000UL,
-    SYS_CORE_FREQ_36M = 36000000UL,
-    SYS_CORE_FREQ_48M = 48000000UL,
-    SYS_CORE_FREQ_64M = 64000000UL,
-    SYS_CORE_FREQ_72M = 72000000UL,
-    SYS_CORE_FREQ_80M = 80000000UL,
-}SYS_Core_Freq_t;
-
 static uint8_t LL_SystemClock_Config(uint32_t in_clock_index, uint32_t in_clk_freq);
 static void SystemClockHSE_Config(SYS_Core_Freq_t in_clk_freq);
 static void Clock48_Domain_Cofing(void);
 static void RTCClockLSE_Config(void);
 static void pvd_pvm_isr_handler(void *ctx);
-
-
-typedef enum{
-    MCO_FREQ_1M = 10000000UL,
-    MCO_FREQ_2M = 2000000UL,
-	MCO_FREQ_4M = 4000000UL,
-	MCO_FREQ_8M = 8000000UL,
-	MCO_FREQ_16M = 16000000UL
-}mco_freq_t;
-
 
 static void core_get_device_uid(char* id, uint8_t len){
 #define HEX "0123456789ABCDEF"
@@ -422,7 +425,6 @@ static void read_cmd_uart_state_transition_action(void *currentStateData, struct
 static void gps_time_state_transition_action(void *currentStateData, struct event *event, void *newStateData);
 static void idle_state_transition_action(void *currentStateData, struct event *event, void *newStateData);
 
-
 static bool check_event(void *check_event, struct event *event);
 static void entry_self_test_state_handler(void *state_data, struct event *event);
 
@@ -613,7 +615,7 @@ int main(void){
     uint32_t err = 0;
     /* USER CODE END 1 */
     if(1){  /// \brief 等待供电稳定
-        uint32_t _system_clock_count = 8000000;
+        uint32_t _system_clock_count = 20000000;
         while(_system_clock_count--);
     }
 
@@ -629,6 +631,10 @@ int main(void){
 
     gpio_output_initialize();
     gpio_input_initialize();
+
+    gpio_buzzer_on();
+    HAL_Delay(100);
+    gpio_buzzer_off();
 
     gps_pps_isr_install(IO_PPS_PORT, IO_PPS_PIN, &gps_pps_isr_handler, &gps_data_domain);
 
@@ -714,43 +720,38 @@ int main(void){
     if(0){
         SPI_HandleTypeDef *spi1_handle = NULL;
         st_spi1_init(&spi1_handle);
-        ads127_bsp_reset_pin_initial(GPIOC, 4);
-        ads127_bsp_start_pin_initial(GPIOC, 5);
+        ads127_bsp_reset_pin_initial(IO_ADS_RESET_PORT, IO_ADS_RESET_PIN);
 
+        core_mco_enable(MCO_FREQ_16M);
         ads127_bsp_reset();
-        ads127_driver_initialize(spi1_handle, GPIOA, 4);
-        if(0){
-            ads127_dev_t device = {
-                    0
-            };
+        ads127_driver_initialize(spi1_handle, IO_ADS_CS_PORT, IO_ADS_CS_PIN);
+        ads127_dev_t device = {
+                0
+        };
+        if(1){
             ads127_get_id(&device);
             ads127_get_id(&device);
             ads127_get_mode(&device);
             HAL_Delay(100);
         }
-        if(0){
-            ads127_dev_t device = {
-                    .config.val = 0x00,
-            };
+        if(1){
             uint32_t ret = 0;
             ads127_configure(&device);
-            device.config.val = 0;
+            device.config.fsc = 1;
+            device.config.ofc = 1;
+            ads127_configure(&device);
             ret = ads127_get_configure(&device);
             HAL_Delay(ret);
         }
-        if(0){
-            ads127_dev_t device = {
-                    .ofc.val = 0x00112233,
-            };
+        if(1){
+            device.ofc.val = 0x00ffff20;
             ads127_configure_ofc(&device);
             device.ofc.val = 0;
             ads127_get_ofc(&device);
             HAL_Delay(100);
         }
-        if(0){
-            ads127_dev_t device = {
-                    .fsc.val = 0x1122,
-            };
+        if(1){
+            device.fsc.val = 0x1122;
             ads127_configure_fsc(&device);
             device.fsc.val = 0;
             ads127_get_fsc(&device);
@@ -758,7 +759,6 @@ int main(void){
         }
         HAL_Delay(100);
 
-        ads127_dev_t device = ADS127_DEFAULT_DEVICE();
         ads127_get_id(&device);
         ads127_get_mode(&device);
         ads127_get_configure(&device);
@@ -1149,10 +1149,10 @@ static void entry_self_test_state_handler(void *state_data, struct event *event)
     int err = 0;
 
     data_domain->fild->self_test = 0;
-//    gpio_buzzer_on();
 
     ads127_bsp_reset_pin_initial(IO_ADS_RESET_PORT, IO_ADS_RESET_PIN);
     ads127_bsp_start_pin_initial(IO_ADS_START_PORT, IO_ADS_START_PIN);
+    ads127_bsp_drdy_pin_initial(IO_ADS_DRDY_PORT, IO_ADS_DRDY_PIN);
 
     gpio_ts3a_mcu();
 
@@ -1194,8 +1194,17 @@ static void entry_self_test_state_handler(void *state_data, struct event *event)
     }
     log_file_create(NULL, NULL);   /// 在默认位置创建日志文件
 
+    if(1){
+        err = parse_ini_file_from_sd(sd_root_path, data_domain->sys_config);
+        if(err){
+            log_printf("无法加载配置文件,以默认配置运行\n");
+        }
+        log_printf("系统串口波特率: %lubps, GPS串口波特率:%lubps, 采样时钟:%luHz, 采样文件限制类型:%d, 采样文件限制数值%d\n", data_domain->sys_config->system.uart_baudrate, data_domain->sys_config->gps.baudrate, data_domain->sys_config->ads.clk, data_domain->sys_config->ads.file.limit_type, data_domain->sys_config->ads.file.limit);
+        save_ini_file_to_sd(sd_root_path, data_domain->sys_config);
+    }
+
     if(1){  /// \brief 检测 Analog 采样 ADS127L01
-        analog_data_domain.clk = MCO_FREQ_16M;
+        analog_data_domain.clk = data_domain->sys_config->ads.clk;
         ads127_bsp_stop();
         core_mco_enable(analog_data_domain.clk);
         st_spi1_init(&analog_data_domain.ads_spi_handle[0]);
@@ -1203,9 +1212,70 @@ static void entry_self_test_state_handler(void *state_data, struct event *event)
         ads127_driver_initialize(analog_data_domain.ads_spi_handle[0], IO_ADS_CS_PORT , IO_ADS_CS_PIN);
         uint32_t device_id = 0;
         device_id = ads127_get_id(&analog_data_domain.device);
-        ads127_configure(&analog_data_domain.device);
         if(device_id & 0x03){
+            FIL cal = { 0 };
+            char cal_txt[32] = {'\0'};
+            uint32_t ofc = 0, fsc = 0x8000;
+
+            ads127_get_mode(&data_domain->analog_domain->device);
+            HAL_Delay(1);
+            ads127_get_configure(&data_domain->analog_domain->device);
+
             log_printf("检测到 ADC Chip, 设备ID: %#x. \n", device_id);
+            log_printf("ADC 硬件配置[采样时钟 %luHz 过采样因子 %d 数据接口 %d,%d 运行模式 %d 数字滤波器 %d 偏移校准值 %#X 增益校准值 %#X]\n", data_domain->analog_domain->clk, ads127_get_osr(&data_domain->analog_domain->device), data_domain->analog_domain->device.mode.format, data_domain->analog_domain->device.mode.fsmode, data_domain->analog_domain->device.mode.hr, data_domain->analog_domain->device.mode.filter, data_domain->sys_config->ads.offset_calibration, data_domain->sys_config->ads.gain_calibration);
+#if(1)
+            if((data_domain->sys_config->ads.offset_calibration != UINT32_MAX)) goto config_offset_section;
+            ofc = ads127_bsp_offset_calibration();
+            if(ofc == 0){
+                log_printf("偏移校准失败.\n");
+                gpio_buzzer_on();
+                HAL_Delay(1000);
+            }else{
+                data_domain->sys_config->ads.offset_calibration = ofc;
+                save_ini_file_to_sd(sd_root_path, data_domain->sys_config);
+                log_printf("偏移校准成功[OFFSET:%#X].\n", ofc);
+            }
+            config_offset_section:
+            data_domain->analog_domain->device.ofc.val = data_domain->sys_config->ads.offset_calibration;
+
+#define ADS_GAIN_CALIBRATION_FILE_PATH             "calibration/gain.txt"
+            if((data_domain->sys_config->ads.gain_calibration != UINT32_MAX)) goto config_gain_sectiion;
+            f_chdir(sd_root_path);
+            err = f_open(&cal, ADS_GAIN_CALIBRATION_FILE_PATH, FA_READ | FA_OPEN_EXISTING);
+            if(err){
+                goto config_gain_sectiion;
+            }
+            err = (uint32_t)f_gets(cal_txt, sizeof cal_txt, &cal);
+            if(err == 0){
+                err = 1;
+                f_close(&cal);
+                goto config_gain_sectiion;
+            }else{
+                err = 0;
+            }
+            f_close(&cal);
+            fsc = strtoul(cal_txt, NULL, 0);   /// 16进制数字, 补码格式
+            fsc = ads127_bsp_gain_calibration(fsc);
+            if(fsc == 0x8000){
+                log_printf("增益校准失败.\n");
+                gpio_buzzer_on();
+                HAL_Delay(1000);
+                goto config_gain_sectiion;
+            }else{
+                data_domain->sys_config->ads.gain_calibration = fsc;
+                save_ini_file_to_sd(sd_root_path, data_domain->sys_config);
+                log_printf("增益校准成功[OFFSET:%#X].\n", fsc);
+            }
+            config_gain_sectiion:
+            if(err){
+                log_printf("无法加载增益校准配置.\n");
+            }
+
+            data_domain->analog_domain->device.fsc.val = (uint16_t)data_domain->sys_config->ads.gain_calibration;
+
+#undef ADS_GAIN_CALIBRATION_FILE_PATH
+#endif
+
             core_mco_disable();
         }else{
             log_printf("无法检测 ADC Chip! \n");
@@ -1417,10 +1487,32 @@ static void entry_analog_state_handler(void* state_data, struct event *event){
     uint32_t err = 0, ds = 0, rate = 0, osr = 256;
     char name[64] = { '\0' };
 
+    core_mco_enable(data_domain->clk);
     if(data_domain->ads_spi_handle[0] == NULL){
         st_spi1_init(&data_domain->ads_spi_handle[0]);
     }
+#if(1)
+    if(1){
+        uint8_t tconfig = 0;
+        uint32_t tofc = 0, tfsc = 0;
+        ads127_configure_ofc(&data_domain->device);
+        HAL_Delay(1);
+        tofc = ads127_get_ofc(&data_domain->device);
+        HAL_Delay(1);
+        ads127_configure_fsc(&data_domain->device);
+        HAL_Delay(1);
+        tfsc = ads127_get_fsc(&data_domain->device);
+        HAL_Delay(1);
+        data_domain->device.config.ofc = 1;
+        data_domain->device.config.fsc = 0;
+        ads127_configure(&data_domain->device);
+        HAL_Delay(1);
+        tconfig = ads127_get_configure(&data_domain->device);
 
+        log_printf("ADC Chip:[%#x][%#x][%#x]\n", tconfig, tofc, tfsc);
+    }
+
+#endif
     if(data_domain->ads_data_file.obj.fs){
         f_close(&data_domain->ads_data_file);
     }
@@ -1448,10 +1540,10 @@ static void entry_analog_state_handler(void* state_data, struct event *event){
     osr = ads127_get_osr(&data_domain->device);
     osr = (osr != -1) ? osr : 256;
     rate = (data_domain->clk) / osr;
-    data_domain->th = data_domain->sys_config->ads.ctrl.file.limit_type ? (data_domain->sys_config->ads.ctrl.file.limit << 10) : (rate * 4 * data_domain->sys_config->ads.ctrl.file.limit);   /// 计算文件限制大小
+    data_domain->th = data_domain->sys_config->ads.file.limit_type ? (data_domain->sys_config->ads.file.limit << 10) : (rate * 4 * data_domain->sys_config->ads.file.limit);   /// 计算文件限制大小
 
-    ads127_bsp_drdy_isr_install(IO_ADS_DRDY_PORT, IO_ADS_DRDY_PIN, ads127_bsp_read_data_from_isr, data_domain->ads_spi_handle[0]);
-    core_mco_enable(data_domain->clk);
+    ads127_bsp_drdy_isr_install(IO_ADS_DRDY_PORT, IO_ADS_DRDY_PIN, ads127_bsp_read_data_from_isr, ads127_driver_handle());
+
     ads127_bsp_start();
 
     if(!ads127_bsp_availablle(NULL)){

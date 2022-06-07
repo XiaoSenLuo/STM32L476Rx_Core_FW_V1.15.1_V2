@@ -29,6 +29,6 @@ void ads127_cs_set_level(uint8_t level);
 
 uint32_t ads127_data_frame(ads127_data_frame_handle handle);    /// 发送数据帧, 阻塞运行
 
-
+SPI_HandleTypeDef * ads127_driver_handle(void);
 
 #endif //STM32L476RX_ADS127_DRIVER_H

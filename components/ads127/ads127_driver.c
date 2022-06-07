@@ -76,3 +76,6 @@ uint32_t ads127_data_frame(ads127_data_frame_handle handle){
     return *(uint32_t*)(&handle->rx_data[handle->cmd_length]);
 }
 
+SPI_HandleTypeDef * ads127_driver_handle(void){
+    return ads_spi_handle;
+}

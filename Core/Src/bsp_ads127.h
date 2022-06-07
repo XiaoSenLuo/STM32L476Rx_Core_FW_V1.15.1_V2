@@ -38,7 +38,13 @@ typedef struct ads_data_init_s{
 
 #define ADS_DATA_INIT_DEFAULT()
 
+#define ADS_DATA_CACHE_OFFSET                   (32)
+#define ADS_DATA_CACHE_SIZE                     ((4 * 8000) + (ADS_DATA_CACHE_OFFSET))
+
+
 typedef void (*ads_drdy_callback_t)(void*);
+
+void ads127_bsp_drdy_pin_initial(GPIO_TypeDef * drdyPort, int32_t drdyPin);
 
 void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_drdy_callback_t fn, void *ctx);
 
@@ -87,10 +93,15 @@ typedef struct ads_file_header_s {
 typedef struct ads_file_header_s * ads_file_header_handle;
 
 uint32_t ads127_bsp_availablle(void* *ptr);
+void ads127_bsp_clear_save_fild(void);
 int ads127_bsp_lock_user(void);
 int ads127_bsp_unlock_user(void);
 uint32_t ads127_bsp_write_file(void *file);
 int ads127_bsp_get_file_header(void *out);
 uint32_t ads127_bsp_create_file(void *file, void *out);
+
+uint32_t ads127_bsp_offset_calibration(void);
+
+uint16_t ads127_bsp_gain_calibration(uint32_t expected_code);
 
 #endif /* ADS127_BSP_ADS127_H_ */

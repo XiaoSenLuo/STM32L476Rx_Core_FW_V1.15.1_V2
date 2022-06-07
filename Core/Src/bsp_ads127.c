@@ -130,9 +130,6 @@ typedef struct ads_read_ctrl_s{
 }ads_read_ctrl_t;
 
 
-#define ADS_DATA_CACHE_OFFSET                   (32)
-#define ADS_DATA_CACHE_SIZE                     ((4 * 8000) + (ADS_DATA_CACHE_OFFSET))
-
 static uint8_t ads_data_cache1[ADS_DATA_CACHE_SIZE] __attribute__((section(".ram2"))) = { 0 };
 static uint8_t ads_data_cache2[ADS_DATA_CACHE_SIZE] __attribute__((section(".ram1"))) = { 0 };
 
@@ -151,8 +148,7 @@ static ads_read_ctrl_t ads_read_ctrl = {
 };
 
 
-void ads127_bsp_read_init(const ads_data_init_t* init, void (*fn)(void *), void * ctx){
-    uint32_t osr = 0;
+void   ads127_bsp_read_init(const ads_data_init_t* init, void (*fn)(void *), void * ctx){
     ads_read_ctrl.data.limit.step = 4 - init->config.cs_enb;
     ads_read_ctrl.data.index = ADS_DATA_CACHE_OFFSET;
 #if(0)
@@ -244,8 +240,26 @@ static GPIO_TypeDef *adsDRDYPinPort = NULL, *adsStartPinPort = NULL, *adsResetPi
 static int32_t adsDRDYPin = -1, adsStartPin = -1, adsResetPin = -1;
 static int adsDRDY_IRQn = -255;
 
-void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_drdy_callback_t fn, void *ctx){
+void ads127_bsp_drdy_pin_initial(GPIO_TypeDef * drdyPort, int32_t drdyPin){
+    GPIO_InitTypeDef GPIO_InitStructure = {
+            .Alternate = 0,
+            .Mode = GPIO_MODE_IT_FALLING,
+            .Pin = 1UL << drdyPin,
+            .Pull = GPIO_PULLUP,
+            .Speed = GPIO_SPEED_LOW,
+    };
+    if(drdyPort && (drdyPin >= 0)){
+        HAL_GPIO_Init(drdyPort, &GPIO_InitStructure);
+        int gpio = (gpio_num_t)drdyPin;
+        adsDRDY_IRQn = gpio_get_irqn(gpio);
 
+        adsDRDYPin = drdyPin;
+        adsDRDYPinPort = drdyPort;
+    }
+}
+
+void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_drdy_callback_t fn, void *ctx){
+    UNUSED(fn);
     GPIO_InitTypeDef GPIO_InitStructure = {
             .Alternate = 0,
             .Mode = GPIO_MODE_IT_FALLING,
@@ -258,8 +272,8 @@ void ads127_bsp_drdy_isr_install(GPIO_TypeDef * drdyPort, int32_t drdyPin, ads_d
 
         int gpio = (gpio_num_t)drdyPin;
         adsDRDY_IRQn = gpio_get_irqn(gpio);
-        ll_gpio_exti_isr_install((gpio_num_t)gpio, fn, ctx);
-        HAL_NVIC_SetPriority(adsDRDY_IRQn, 8, 0);
+        ll_gpio_exti_isr_install((gpio_num_t)gpio, &ads127_bsp_read_data_from_isr, ctx);
+        HAL_NVIC_SetPriority(adsDRDY_IRQn, 4, 0);
         HAL_NVIC_EnableIRQ(adsDRDY_IRQn);
     }
     adsDRDYPin = drdyPin;
@@ -366,6 +380,10 @@ uint32_t ads127_bsp_availablle(void* *ptr){
     return 0;
 }
 
+void ads127_bsp_clear_save_fild(void){
+    ads_read_ctrl.action.save = 0;
+}
+
 int ads127_bsp_lock_user(void){
     if(ads_read_ctrl.data.lock) return ads_read_ctrl.data.lock;
     ads_read_ctrl.data.lock = 1;
@@ -445,6 +463,106 @@ uint32_t ads127_bsp_create_file(void *file, void *out){
     return err;
 #undef HEX
 }
+
+
+uint32_t ads127_bsp_offset_calibration(void){
+    uint32_t ofc = 0;
+#if(1)
+#define CALCULATION_COUNT_SHIFT      4
+    uint8_t *ptr = NULL;
+    uint8_t config = 0, count = (1UL << CALCULATION_COUNT_SHIFT);
+    uint32_t tick = 0, start_tick = 0;
+    uint64_t sum = 0;
+    ads_data_init_t init = {{0}, {0}, {0}};
+    config = ads127_get_configure(NULL);
+
+    init.config.val = config;
+    ads127_bsp_read_init(&init, NULL, NULL);
+#if(0)
+    ads_read_ctrl.count.response = 0;
+    ads_read_ctrl.count.counter = 0;
+#endif
+
+    ads127_bsp_drdy_isr_install(adsDRDYPinPort, adsDRDYPin, &ads127_bsp_read_data_from_isr, ads127_driver_handle());
+    ads127_command_start();
+    do{
+        sum = 0;
+
+        tick = start_tick = HAL_GetTick();
+        do{
+            tick = HAL_GetTick();
+        }while((ads127_bsp_availablle(&ptr) == 0) && (tick - start_tick < 3000));
+        if(tick - start_tick > 3000){
+            return 0;
+        }
+        ads127_bsp_lock_user();
+        ptr = (uint8_t *)(ptr + ADS_DATA_CACHE_OFFSET);
+        for(int i = 0; i < (ADS_DATA_CACHE_SIZE - ADS_DATA_CACHE_OFFSET);){
+            sum += ((((uint32_t)ptr[i]) << 16) | (((uint32_t)ptr[i + 1]) << 8) | (((uint32_t)ptr[i + 2])));
+            i += ads_read_ctrl.data.limit.step;
+        }
+        ads127_bsp_clear_save_fild();
+        ads127_bsp_unlock_user();
+        ofc += sum / ((ADS_DATA_CACHE_SIZE - ADS_DATA_CACHE_OFFSET) / ads_read_ctrl.data.limit.step);
+    }while(--count);
+    ads127_command_stop();
+
+    ofc >>= CALCULATION_COUNT_SHIFT;
+#undef CALCULATION_COUNT
+#endif
+
+    return ofc;
+}
+
+uint16_t ads127_bsp_gain_calibration(uint32_t expected_code){   /// TODO 增益校准
+    uint16_t fsc = 0x8000;
+    uint8_t *ptr = NULL;
+    uint8_t config = 0;
+    uint32_t tick = 0, start_tick = 0, actual_code = 0;
+    uint64_t sum = 0;
+    int32_t expected_voltage = 0, actual_voltage = 0;
+    float gain_error = 0.000000000000f;
+
+    config = ads127_get_configure(NULL);
+    ads_read_ctrl.data.limit.step = 4 - ((config & 0x02) >> 2);
+    ads_read_ctrl.data.index = ADS_DATA_CACHE_OFFSET;
+#if(0)
+    ads_read_ctrl.count.response = 0;
+    ads_read_ctrl.count.counter = 0;
+#endif
+    ads_read_ctrl.current_counter  = 0;
+    ads_read_ctrl.action.val = 0;
+
+    ads127_bsp_drdy_isr_install(adsDRDYPinPort, adsDRDYPin, &ads127_bsp_read_data_from_isr, ads127_driver_handle());
+
+    ads127_command_start();
+    tick = start_tick = HAL_GetTick();
+    do{
+        tick = HAL_GetTick();
+    }while((ads127_bsp_availablle(&ptr) == 0) && (tick - start_tick < 1000));
+    if(tick - start_tick > 1000){
+        return fsc;
+    }
+    ads127_command_stop();
+    ads127_bsp_lock_user();
+    ptr += ADS_DATA_CACHE_OFFSET;
+    for(int i = 0; i < (ADS_DATA_CACHE_SIZE - ADS_DATA_CACHE_OFFSET);){
+        sum += (((uint32_t)ptr[i]) << 16) | (((uint32_t)ptr[i + 1]) << 8) | (((uint32_t)ptr[i + 2]));
+        i += ads_read_ctrl.data.limit.step;
+    }
+    ads127_bsp_unlock_user();
+
+    actual_code = sum / ((ADS_DATA_CACHE_SIZE - ADS_DATA_CACHE_OFFSET) >> 2);
+    expected_voltage = ((int32_t)(expected_code << 8)) >> 8;
+    actual_voltage = ((int32_t)(actual_code << 8)) >> 8;
+
+    gain_error = (float)expected_voltage / (float)actual_voltage;
+
+    fsc = (uint16_t)(gain_error * 0.000030517578f + 0.500000000000f);
+
+    return fsc;
+}
+
 
 #endif
 

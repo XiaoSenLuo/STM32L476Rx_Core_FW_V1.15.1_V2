@@ -85,7 +85,7 @@ uint8_t ads127_get_configure(ads127_dev_t *device){
             .tx_data = {ADS127_COMMAND_RREG_BASE | ADS127_REG_CONFIG, 0, 0, 0, 0},
     };
     ret = ads127_data_frame(&data_frame);
-    device->config.val = (uint8_t)ret;
+    if(device) device->config.val = (uint8_t)ret;
     return (uint8_t)ret;
 }
 
@@ -96,6 +96,10 @@ void ads127_configure_ofc(ads127_dev_t *device){
             .data_length = 3,
             .tx_data = {ADS127_COMMAND_WREG_BASE | ADS127_REG_OFC0, 2, device->ofc.ofc0, device->ofc.ofc1, device->ofc.ofc2, 0},
     };
+//    ads127_get_configure(&device);
+//    device->config.ofc = 1;
+//    ads127_configure(&device);
+
     ads127_data_frame(&data_frame);
 }
 
@@ -108,7 +112,7 @@ uint32_t ads127_get_ofc(ads127_dev_t *device){
             .tx_data = {ADS127_COMMAND_RREG_BASE | ADS127_REG_OFC0, 2, 0, 0, 0},
     };
     ret = ads127_data_frame(&data_frame);
-    device->ofc.val = ret;
+    if(device) device->ofc.val = ret;
     return (uint32_t)ret;
 }
 
@@ -119,7 +123,13 @@ void ads127_configure_fsc(ads127_dev_t *device){
             .data_length = 2,
             .tx_data = {ADS127_COMMAND_WREG_BASE | ADS127_REG_FSC0, 1, device->fsc.fsc0, device->fsc.fsc1, 0, 0},
     };
+//    ads127_get_configure(&device);
+//    device->config.fsc = 1;
+//    ads127_configure(&device);
+
     ads127_data_frame(&data_frame);
+
+
 }
 
 uint16_t ads127_get_fsc(ads127_dev_t *device){
@@ -131,7 +141,7 @@ uint16_t ads127_get_fsc(ads127_dev_t *device){
             .tx_data = {ADS127_COMMAND_RREG_BASE | ADS127_REG_FSC0, 1, 0, 0, 0},
     };
     ret = ads127_data_frame(&data_frame);
-    device->fsc.val = (uint16_t)ret;
+    if(device) device->fsc.val = (uint16_t)ret;
     return (uint16_t)ret;
 }
 
@@ -148,7 +158,6 @@ uint8_t ads127_get_id(ads127_dev_t *device){
     return (uint8_t)ret;
 }
 
-
 uint8_t ads127_get_mode(ads127_dev_t * device){
     uint32_t ret = 0;
     ads127_data_frame_t data_frame = {
@@ -158,7 +167,7 @@ uint8_t ads127_get_mode(ads127_dev_t * device){
             .tx_data = {ADS127_COMMAND_RREG_BASE | ADS127_REG_MODE, 0, 0, 0, 0},
     };
     ret = ads127_data_frame(&data_frame);
-    device->mode.val = (uint8_t)ret;
+    if(device) device->mode.val = (uint8_t)ret;
     return (uint8_t)ret;
 }
 
