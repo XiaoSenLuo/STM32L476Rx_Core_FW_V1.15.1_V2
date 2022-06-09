@@ -623,6 +623,7 @@ int main(void){
 
     /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
+    HAL_Delay(2000);
     gpio_all_set_analog();
     rtc_initialize(NULL);
     SystemClockHSE_Config(SYS_CORE_FREQ_72M);
@@ -1421,7 +1422,7 @@ static void entry_gps_time_state_handler(void *state_data, struct event *event){
     time.time.ssecond = zda_parse.zda.time.microseconds;
     time.time.second = zda_parse.zda.time.seconds;
     time.time.minute = zda_parse.zda.time.minutes;
-    time.time.hour = zda_parse.zda.time.hours;  /// XXX:进位到小时结束, 天数进位可能性太小, 不继续进位了, 权当隐藏 BUG
+    time.time.hour = zda_parse.zda.time.hours;
     time.time.hour += 8;
     time.date.day = zda_parse.zda.date.day;
     time.date.month = zda_parse.zda.date.month;
