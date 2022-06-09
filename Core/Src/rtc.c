@@ -28,6 +28,8 @@
 
 static uint8_t rtc_waitfor_synchro(void);
 
+#define RTC_CONFIG_BKP_FILD               (0xA2F8)
+
 /* USER CODE END 0 */
 
 static RTC_HandleTypeDef hrtc = { 0 };
@@ -90,6 +92,33 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
 
     err = HAL_RTC_Init(&hrtc);
     if(hrtc_handle) *hrtc_handle = &hrtc;
+
+    if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != RTC_CONFIG_BKP_FILD){
+//        rtc_date_time_t dt = {.time.val = 0, .date.val = 0};
+//        st_rtc_set_time_v2(&dt);
+        RTC_DateTypeDef sdatestructure = {0};
+        RTC_TimeTypeDef stimestructure = {0};
+
+        /// 2022-6-9 星期四
+        sdatestructure.Year = 0x22;
+        sdatestructure.Month = RTC_MONTH_JUNE;
+        sdatestructure.Date = 0x09;
+        sdatestructure.WeekDay = RTC_WEEKDAY_THURSDAY;
+        HAL_RTC_SetDate(&hrtc,&sdatestructure,RTC_FORMAT_BCD);
+
+        /// 23:59:59
+        stimestructure.Hours = 0x23;
+        stimestructure.Minutes = 0x59;
+        stimestructure.Seconds = 0x59;
+        stimestructure.TimeFormat = RTC_HOURFORMAT12_AM;
+        stimestructure.DayLightSaving = RTC_DAYLIGHTSAVING_NONE ;
+        stimestructure.StoreOperation = RTC_STOREOPERATION_RESET;
+        HAL_RTC_SetTime(&hrtc, &stimestructure, RTC_FORMAT_BCD);
+
+        HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, RTC_CONFIG_BKP_FILD);
+    }else{
+        __HAL_RCC_CLEAR_RESET_FLAGS();
+    }
 
     return err;
 }
