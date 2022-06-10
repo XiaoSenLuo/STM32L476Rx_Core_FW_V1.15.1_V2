@@ -73,14 +73,19 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
     __HAL_RCC_PWR_CLK_ENABLE();
     HAL_PWR_EnableBkUpAccess();
 
-    RCC_OscInitStruct.OscillatorType =  RCC_OSCILLATORTYPE_LSE;
+    RCC_OscInitStruct.OscillatorType =  RCC_OSCILLATORTYPE_LSE | RCC_OSCILLATORTYPE_LSI;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
     RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-    HAL_RCC_OscConfig(&RCC_OscInitStruct);
+    RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
+    err = HAL_RCC_OscConfig(&RCC_OscInitStruct);
+    if(err) err = 1;
 
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
+    err = HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
+    if(err) err = 1;
+
+    __HAL_RCC_RTC_ENABLE();
 
     hrtc.Instance = RTC;
     hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
@@ -89,37 +94,37 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
     hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
     hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
     hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-
     err = HAL_RTC_Init(&hrtc);
-    if(hrtc_handle) *hrtc_handle = &hrtc;
+    if(err == HAL_OK){
+        if(hrtc_handle) *hrtc_handle = &hrtc;
 
-    if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != RTC_CONFIG_BKP_FILD){
+        if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != RTC_CONFIG_BKP_FILD){
 //        rtc_date_time_t dt = {.time.val = 0, .date.val = 0};
 //        st_rtc_set_time_v2(&dt);
-        RTC_DateTypeDef sdatestructure = {0};
-        RTC_TimeTypeDef stimestructure = {0};
+            RTC_DateTypeDef sdatestructure = {0};
+            RTC_TimeTypeDef stimestructure = {0};
 
-        /// 2022-6-9 星期四
-        sdatestructure.Year = 0x22;
-        sdatestructure.Month = RTC_MONTH_JUNE;
-        sdatestructure.Date = 0x09;
-        sdatestructure.WeekDay = RTC_WEEKDAY_THURSDAY;
-        HAL_RTC_SetDate(&hrtc,&sdatestructure,RTC_FORMAT_BCD);
+            /// 2022-6-9 星期四
+            sdatestructure.Year = 0x22;
+            sdatestructure.Month = RTC_MONTH_JUNE;
+            sdatestructure.Date = 0x09;
+            sdatestructure.WeekDay = RTC_WEEKDAY_THURSDAY;
+            HAL_RTC_SetDate(&hrtc,&sdatestructure,RTC_FORMAT_BCD);
 
-        /// 23:59:59
-        stimestructure.Hours = 0x23;
-        stimestructure.Minutes = 0x59;
-        stimestructure.Seconds = 0x59;
-        stimestructure.TimeFormat = RTC_HOURFORMAT12_AM;
-        stimestructure.DayLightSaving = RTC_DAYLIGHTSAVING_NONE ;
-        stimestructure.StoreOperation = RTC_STOREOPERATION_RESET;
-        HAL_RTC_SetTime(&hrtc, &stimestructure, RTC_FORMAT_BCD);
+            /// 23:59:59
+            stimestructure.Hours = 0x23;
+            stimestructure.Minutes = 0x59;
+            stimestructure.Seconds = 0x59;
+            stimestructure.TimeFormat = RTC_HOURFORMAT12_AM;
+            stimestructure.DayLightSaving = RTC_DAYLIGHTSAVING_NONE ;
+            stimestructure.StoreOperation = RTC_STOREOPERATION_RESET;
+            HAL_RTC_SetTime(&hrtc, &stimestructure, RTC_FORMAT_BCD);
 
-        HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, RTC_CONFIG_BKP_FILD);
-    }else{
-        __HAL_RCC_CLEAR_RESET_FLAGS();
+            HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, RTC_CONFIG_BKP_FILD);
+        }else{
+            __HAL_RCC_CLEAR_RESET_FLAGS();
+        }
     }
-
     return err;
 }
 

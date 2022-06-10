@@ -625,13 +625,19 @@ int main(void){
     HAL_Init();
     HAL_Delay(2000);
     gpio_all_set_analog();
-    rtc_initialize(NULL);
     SystemClockHSE_Config(SYS_CORE_FREQ_72M);
     HAL_Init();
     mem_dma_init();
-
     gpio_output_initialize();
     gpio_input_initialize();
+
+    err = rtc_initialize(NULL);
+    if(err != HAL_OK){
+        gpio_buzzer_on();
+        HAL_Delay(10000);
+        HAL_NVIC_SystemReset();
+        while(1);
+    }
 
     gpio_buzzer_on();
     HAL_Delay(100);
@@ -1488,6 +1494,7 @@ static void entry_analog_state_handler(void* state_data, struct event *event){
     uint32_t err = 0, ds = 0, rate = 0, osr = 256;
     char name[64] = { '\0' };
 
+    gpio_buzzer_on();
     core_mco_enable(data_domain->clk);
     if(data_domain->ads_spi_handle[0] == NULL){
         st_spi1_init(&data_domain->ads_spi_handle[0]);
@@ -1510,7 +1517,7 @@ static void entry_analog_state_handler(void* state_data, struct event *event){
         HAL_Delay(1);
         tconfig = ads127_get_configure(&data_domain->device);
 
-        log_printf("ADC Chip:[%#x][%#x][%#x]\n", tconfig, tofc, tfsc);
+        log_printf("ADC Chip:[配置:%#x][偏移校准:%#x][增益校准:%#x]\n", tconfig, tofc, tfsc);
     }
 
 #endif
@@ -1552,6 +1559,8 @@ static void entry_analog_state_handler(void* state_data, struct event *event){
     }
     data_domain->fild->buzzer = 1;
     data_domain->buzzer_number = ANALOG_BUZZER_NUMBER;
+    log_printf("采样开始......\n");
+    gpio_buzzer_off();
 }
 
 static void entry_analog_write_file_state_handler(void* state_data, struct event *event){
