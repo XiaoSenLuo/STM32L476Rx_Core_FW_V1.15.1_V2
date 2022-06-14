@@ -2,8 +2,8 @@
 // Created by XIAOSENLUO on 2022/5/28.
 //
 
-#ifndef STM32L476RX_CIRCULAR_BUFFER_H
-#define STM32L476RX_CIRCULAR_BUFFER_H
+#ifndef CIRCULAR_BUFFER_H
+#define CIRCULAR_BUFFER_H
 
 #include "stdint.h"
 #include "string.h"
@@ -36,4 +36,4 @@ int circular_buffer_clean(circular_buffer_handle handle);
 }
 #endif
 
-#endif //STM32L476RX_CIRCULAR_BUFFER_H
+#endif //CIRCULAR_BUFFER_H

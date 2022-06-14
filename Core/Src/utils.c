@@ -51,13 +51,8 @@ int replace_last_index_of_chr(char* str, const char c1, const char c2){
  */
 void string_format(char* out, const char* format, ...){   // dddd-dd-dd-dd-dd-dd
     va_list arp;
-
-    int n = 0;
-
     va_start(arp, format);
-
-    n = vsprintf(out, format, arp);
-
+    vsprintf(out, format, arp);
     va_end(arp);
 }
 

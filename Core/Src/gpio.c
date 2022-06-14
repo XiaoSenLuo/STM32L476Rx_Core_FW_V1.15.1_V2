@@ -72,6 +72,12 @@ void gpio_output_initialize(void){
             .Pull = GPIO_PULLDOWN,
             .Speed = GPIO_SPEED_LOW,
     };
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+
     HAL_GPIO_Init(IO_BZ_PORT, &GPIO_InitStructure);
     HAL_GPIO_WritePin(IO_BZ_PORT, PIN_MASK(IO_BZ_PIN), 0);
 
@@ -88,6 +94,12 @@ void gpio_input_initialize(void){
             .Pull = GPIO_PULLDOWN,
             .Speed = GPIO_SPEED_LOW,
     };
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+
     HAL_GPIO_Init(IO_DET_CMD_PORT, &GPIO_InitStructure);
 
     GPIO_InitStructure.Pin = PIN_MASK(IO_SD_DET_PIN);  /// SD DETECT PIN

@@ -28,6 +28,7 @@ add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 
 add_compile_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
+add_compile_options(-fstack-usage)
 add_compile_options(-std=gnu11)
 add_compile_options(-Wall)
 add_compile_options(-Wfatal-errors)
@@ -72,6 +73,7 @@ include_directories(
         components/mem_dma
         components/st_crc
         components/stateMachine/src
+        components/circular_buffer
 )
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
@@ -91,10 +93,11 @@ file(GLOB_RECURSE SOURCES
         "components/FatFs/src/*.c"
         "components/FatFs/Target/*.c"
         "components/gps/*.c"
-        "components/inih/*.c"
+        "components/inih/ini.c"
         "components/mem_dma/*.c"
         "components/st_crc/*.c"
-        "components/stateMachine/src/*.c")
+        "components/stateMachine/src/*.c"
+        "components/circular_buffer/*.c")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32L476RCTX_FLASH.ld)
 
@@ -108,9 +111,18 @@ add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
 
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
+set(LIST_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.list)
 
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
+        COMMAND ${SIZE} $<TARGET_FILE:${PROJECT_NAME}.elf>
+        COMMAND ${CMAKE_OBJDUMP} -h -S $<TARGET_FILE:${PROJECT_NAME}.elf> > ${LIST_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
         COMMENT "Building ${HEX_FILE}
 Building ${BIN_FILE}")
+
+add_custom_target(UPLOAD
+        arm-none-eabi-gdb -iex "target remote tcp:127.0.0.1:2331"
+        -iex "monitor program $<TARGET_FILE:${PROJECT_NAME}.elf>"
+        -iex "monitor reset init"
+        -iex "disconnect" -iex "quit")

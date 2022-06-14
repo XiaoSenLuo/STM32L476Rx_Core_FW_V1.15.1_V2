@@ -5,15 +5,21 @@
  *      Author: XIAO
  */
 
-#ifndef INC_SYSTEM_TYPEDEF_H_
-#define INC_SYSTEM_TYPEDEF_H_
+#ifndef SYSTEM_TYPEDEF_H_
+#define SYSTEM_TYPEDEF_H_
 
 #include "stdint.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
+    eTYPE_ERROR = -1,
     eTYPE_NOEVENT = 0,
-    eTYPE_USB = 1,
+    eTYPE_SELF,
+    eTYPE_USB,
+    eTYPE_CMD,
     eTYPE_GPS,
     eTYPE_ANALOG,
     eTYPE_SD,
@@ -21,7 +27,7 @@ typedef enum {
 
 typedef enum {
     NOEVENT = 0,
-    EVENT_UART2USB_CONNECT = 1,
+    EVENT_UART2USB_CONNECT,
     EVENT_UART2USB_DISCONNECT,
     EVENT_UART2USB_DATA_READY,
     EVENT_GPS_PPS,
@@ -31,13 +37,6 @@ typedef enum {
     EVENT_SD_DISCONNECT,
 }system_event_def_t;
 
-typedef struct system_event_s{
-    system_event_type_t type;
-    system_event_def_t event;
-    void *event_data;
-}system_event_t;
-
-typedef struct system_event_s * system_event_handle;
 
 typedef struct sys_config_s{
     struct{
@@ -59,31 +58,36 @@ typedef struct sys_config_s{
         	};
         	uint32_t val;
         }fm;
-        uint32_t file_limit;
+        uint32_t file_size_limit;
     }sd;
     struct{
-        struct{
-        	uint32_t conver_rate;
-        	uint32_t start_time;
-        	int32_t work_time;
-        	int32_t shutdown_time;
-        	union{
-        		struct{
-        			uint32_t format : 1;     // 0:bin, 1:txt
-                    int32_t limit_type : 1;  // 0:time, 1:size
-                    uint32_t limit : 8;      // unit:分钟或者MB
-        		};
-        		uint32_t val;
-        	}file;
-        }ctrl;
-        uint32_t ofc;
-        uint32_t fsc;
+        uint32_t clk;
+        uint32_t conver_rate __attribute__((deprecated));
+        uint32_t start_time;
+        uint32_t work_time;
+        uint32_t shutdown_time;
+        union{
+            struct{
+                uint32_t format : 1 __attribute__((deprecated));     // 0:bin, 1:txt
+                uint32_t limit_type : 1;  // 0:time, 1:size
+                uint32_t limit : 16;      // unit:秒或者KB
+            };
+            uint32_t val;
+        }file;
+        uint32_t offset_calibration;
+        uint32_t gain_calibration;
     }ads;
     struct{
         uint32_t baudrate;
     }gps;
     struct{
-
+        union {
+            struct{
+                uint32_t enable : 1;
+                uint32_t output_freq : 1;
+            };
+            uint32_t val;
+        }calibration;
     }rtc;
 }system_config_t;
 
@@ -94,7 +98,7 @@ typedef union u32_cmd_format_u{
         uint32_t cmd_type : 8;
     };
     uint32_t val;
-};
+}u32_cmd_format_t;
 typedef union u32_cmd_format_u * u32_cmd_format_handle;
 
 struct u80_cmd_frame_head_info_s{
@@ -105,11 +109,13 @@ struct u80_cmd_frame_head_info_s{
 };
 typedef struct u80_cmd_frame_head_info_s * cmd_frame_head_info_handle;
 
-struct cmd_data_frame_s {
+typedef struct cmd_data_frame_s {
     struct u80_cmd_frame_head_info_s head;
     void *data;
 }cmd_data_frame_t;
 typedef struct cmd_data_frame_s * cmd_data_frame_handle;
 
-
-#endif /* INC_SYSTEM_TYPEDEF_H_ */
+#ifdef __cplusplus
+}
+#endif
+#endif /* SYSTEM_TYPEDEF_H_ */

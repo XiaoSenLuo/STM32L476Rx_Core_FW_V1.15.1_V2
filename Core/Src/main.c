@@ -615,32 +615,35 @@ int main(void){
     uint32_t err = 0;
     /* USER CODE END 1 */
     if(1){  /// \brief 等待供电稳定
-        uint32_t _system_clock_count = 20000000;
+        uint32_t _system_clock_count = 8000000;
         while(_system_clock_count--);
     }
-
     /* MCU Configuration--------------------------------------------------------*/
 
     /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
-    HAL_Delay(2000);
     gpio_all_set_analog();
     SystemClockHSE_Config(SYS_CORE_FREQ_72M);
     HAL_Init();
-    mem_dma_init();
+
     gpio_output_initialize();
     gpio_input_initialize();
 
     err = rtc_initialize(NULL);
+#if(1)
     if(err != HAL_OK){
         gpio_buzzer_on();
         HAL_Delay(10000);
+        gpio_buzzer_off();
         HAL_NVIC_SystemReset();
         while(1);
     }
+#endif
+    HAL_Delay(2000);
+    mem_dma_init();
 
     gpio_buzzer_on();
-    HAL_Delay(100);
+    HAL_Delay(1000);
     gpio_buzzer_off();
 
     gps_pps_isr_install(IO_PPS_PORT, IO_PPS_PIN, &gps_pps_isr_handler, &gps_data_domain);
@@ -930,8 +933,6 @@ void SystemClockHSE_Config(SYS_Core_Freq_t in_clk_freq){
     /* Initialization Error */
 //    Error_Handler();
     }
-
-    HAL_Init();
 }
 
 void Clock48_Domain_Cofing(void){

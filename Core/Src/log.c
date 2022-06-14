@@ -16,7 +16,6 @@
 #endif
 
 static const char log_default_dir[] = "0:/log";
-static char root[4] = {'0', ':', '/', '\0'};
 static FIL log_file = { 0 };
 static char *log_buffer = NULL;
 
@@ -80,8 +79,6 @@ int log_printf(const char *fmt, ...){
     va_list arp;
 
     if(log_file.obj.fs == NULL){
-        rtc_date_time_t time = { 0 };
-        char path[32] = {'\0'};
         err = log_file_create(log_default_dir, NULL);
         if((err != FR_OK) && (err != FR_EXIST)) goto end_section;
     }

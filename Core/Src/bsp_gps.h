@@ -2,8 +2,8 @@
 // Created by XIAOSENLUO on 2022/5/25.
 //
 
-#ifndef STM32L476RX_BSP_GPS_H
-#define STM32L476RX_BSP_GPS_H
+#ifndef BSP_GPS_H
+#define BSP_GPS_H
 
 
 
@@ -57,4 +57,4 @@ void gps_config_output(const gps_ctrl_output_t * out);
 }
 #endif
 
-#endif //STM32L476RX_BSP_GPS_H
+#endif //BSP_GPS_H

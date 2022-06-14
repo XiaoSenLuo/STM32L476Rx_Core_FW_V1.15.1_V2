@@ -5,7 +5,6 @@
  *      Author: XIAOSENLUO
  */
 
-#include "config_ini.h"
 
 static const char* default_config[] = {
 		"; 配置文件, 行尾必须以CRLF控制符结尾\r\n",
@@ -72,6 +71,9 @@ static const char* default_config[] = {
 		";详细请查看 PCF85063A 数据手册\r\n",
 		"rtc_ex_cal_offset=0x00\r\n",
 		};
+
+
+#include "stddef.h"
 
 size_t get_default_config_lines(void){
 	return (sizeof(default_config) / sizeof(char*));

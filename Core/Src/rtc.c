@@ -73,10 +73,10 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
     __HAL_RCC_PWR_CLK_ENABLE();
     HAL_PWR_EnableBkUpAccess();
 
-    RCC_OscInitStruct.OscillatorType =  RCC_OSCILLATORTYPE_LSE | RCC_OSCILLATORTYPE_LSI;
+    RCC_OscInitStruct.OscillatorType =  RCC_OSCILLATORTYPE_LSE;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
     RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-    RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
+//    RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
     err = HAL_RCC_OscConfig(&RCC_OscInitStruct);
     if(err) err = 1;
 
@@ -94,10 +94,12 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
     hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
     hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
     hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+
     err = HAL_RTC_Init(&hrtc);
+
     if(err == HAL_OK){
         if(hrtc_handle) *hrtc_handle = &hrtc;
-
+#if(0)
         if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != RTC_CONFIG_BKP_FILD){
 //        rtc_date_time_t dt = {.time.val = 0, .date.val = 0};
 //        st_rtc_set_time_v2(&dt);
@@ -124,6 +126,7 @@ int rtc_initialize(RTC_HandleTypeDef_Handle *hrtc_handle){
         }else{
             __HAL_RCC_CLEAR_RESET_FLAGS();
         }
+#endif
     }
     return err;
 }
