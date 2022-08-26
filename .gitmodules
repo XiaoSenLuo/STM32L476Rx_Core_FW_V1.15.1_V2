@@ -1,0 +1,6 @@
+[submodule "components/inih"]
+	path = components/inih
+	url = https://github.com/benhoyt/inih.git
+[submodule "components/stateMachine"]
+	path = components/stateMachine
+	url = https://github.com/misje/stateMachine.git
